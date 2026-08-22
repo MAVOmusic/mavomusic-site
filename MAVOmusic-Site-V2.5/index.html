@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #0a0705; --panel: rgba(255, 92, 0, 0.05);
+      --line: rgba(255, 122, 26, 0.4); --line-dim: rgba(255, 122, 26, 0.18);
+      --text: #ffeedd; --muted: rgba(255, 238, 221, 0.66);
+      --accent: #ff6a00; --burn: #ff2d00;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(255, 90, 0, 0.14), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0 1px, transparent 1px 4px),
+        linear-gradient(rgba(7, 4, 2, 0.74), rgba(7, 4, 2, 0.88)),
+        url("assets/bg-stairway.jpg") center / cover no-repeat fixed,
+        var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    #embers { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    main {
+      position: relative; z-index: 1;
+      padding: 34px 18px 60px;
+      display: flex; flex-direction: column; align-items: center;
+      zoom: 1.25; /* owner wants the 100% view to feel like 125% */
+    }
+
+    .kicker {
+      letter-spacing: 0.45em; text-transform: uppercase;
+      font-size: clamp(10px, 1.5vw, 14px); color: #ffb46b;
+      text-shadow: 0 0 12px rgba(255, 120, 0, 0.6); margin-bottom: 6px;
+    }
+    h1.fireline {
+      margin: 0 0 4px;
+      font-family: "Arial Black", Arial, Helvetica, sans-serif;
+      font-size: clamp(34px, 8vw, 84px);
+      line-height: 1.05; text-align: center; white-space: nowrap;
+    }
+    .fl {
+      display: inline-block;
+      background: linear-gradient(0deg,
+        #5e0a00 0%, #c21700 22%, #ff4500 40%,
+        #ff8c00 55%, #ffd23d 72%, #fff3b0 86%, #ff7300 100%);
+      background-size: 100% 320%;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: rise 1.9s ease-in-out infinite alternate, flick 1.05s ease-in-out infinite;
+    }
+    @keyframes rise { from { background-position: 50% 0%; } to { background-position: 50% 82%; } }
+    @keyframes flick {
+      0%, 100% { filter: drop-shadow(0 0 9px rgba(255, 100, 0, 0.7)) drop-shadow(0 4px 24px rgba(255, 40, 0, 0.42)); }
+      50%      { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 0.95)) drop-shadow(0 2px 38px rgba(255, 60, 0, 0.6)); }
+    }
+    .tagline {
+      color: var(--muted); font-size: clamp(12px, 1.6vw, 15px);
+      text-align: center; max-width: 720px; margin: 8px 0 4px; line-height: 1.6;
+    }
+    .tagline b { color: #ffcf9e; }
+
+    #serverBanner {
+      margin: 18px 0 6px; padding: 8px 16px; border-radius: 999px; font-size: 13px;
+      border: 1px solid var(--line-dim); background: var(--panel); color: var(--muted);
+      text-align: center; max-width: 92vw;
+    }
+    #serverBanner.ok { border-color: rgba(38, 208, 124, 0.5); color: #a9f5cd; }
+    #serverBanner.warn { border-color: #ff4d6d; background: rgba(58,13,19,0.9); color: #ffb3bd; }
+
+    h2 {
+      margin: 34px 0 14px; font-size: clamp(15px, 2vw, 19px);
+      letter-spacing: 0.28em; text-transform: uppercase;
+      color: #ffab63; text-shadow: 0 0 14px rgba(255, 110, 0, 0.5);
+    }
+    h2 small { letter-spacing: 0.1em; color: var(--muted); text-transform: none; }
+
+    .card {
+      display: block; text-decoration: none; color: inherit;
+      border: 1px solid var(--line-dim); border-radius: 12px; padding: 14px;
+      background: linear-gradient(180deg, rgba(255, 106, 0, 0.06), rgba(0, 0, 0, 0.25));
+      transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+      cursor: pointer;
+    }
+    .card:hover {
+      border-color: var(--line); transform: translateY(-3px) scale(1.015);
+      box-shadow: 0 10px 34px rgba(255, 90, 0, 0.22), 0 0 0 1px rgba(255,140,40,.15) inset;
+    }
+    .cicon { font-size: 24px; }
+    .cname { margin-top: 6px; font-weight: 700; font-size: 15px; color: #ffd9ae;
+      text-shadow: 0 0 10px rgba(255, 120, 0, 0.35); }
+    .cdesc { margin-top: 6px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+    footer { margin-top: 54px; text-align: center; }
+    .rights { font-size: 13px; letter-spacing: 0.12em; color: #ffb27a;
+      text-shadow: 0 0 10px rgba(255, 110, 0, 0.4); }
+    .socrow { margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center;
+      align-items: center; gap: 8px 12px; font-size: 14px; }
+    .soc { display: inline-flex; align-items: center; gap: 6px; }
+    .soc img { border-radius: 4px; display: block; }
+    .soc a { font-weight: 800; color: var(--burn); text-decoration: none;
+      text-shadow: 0 0 8px rgba(255, 45, 0, 0.85), 0 0 24px rgba(255, 110, 0, 0.5); }
+    .soc a:hover { text-decoration: underline; }
+    .sep { color: rgba(255, 238, 221, 0.3); }
+    .ver { margin-top: 16px; font-size: 10.5px; color: rgba(255, 238, 221, 0.32); letter-spacing: 0.2em; }
+
+    /* ---- Theatre overlay: screens open INSIDE this page; the URL never changes ---- */
+    #stage {
+      position: fixed; inset: 0; z-index: 60; background: #050202;
+      display: flex; flex-direction: column;
+      opacity: 0; transform: scale(0.975); pointer-events: none;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+    }
+    #stage.live { opacity: 1; transform: none; pointer-events: auto; }
+    .stagebar {
+      flex: 0 0 46px; display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 0 12px;
+      background: linear-gradient(180deg, rgba(60, 14, 2, 0.9), rgba(20, 5, 1, 0.9));
+      border-bottom: 1px solid var(--line-dim);
+    }
+    #stageTitle {
+      font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #ffcf9e; text-shadow: 0 0 10px rgba(255, 110, 0, 0.5);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #stageClose {
+      cursor: pointer; flex: 0 0 auto; padding: 7px 14px; border-radius: 999px;
+      border: 1px solid var(--line); background: rgba(255, 106, 0, 0.12);
+      color: var(--text); font: 700 12px Arial, sans-serif; letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    #stageClose:hover { background: rgba(255, 106, 0, 0.32); }
+    #screen { flex: 1 1 auto; width: 100%; border: 0; display: block; background: #000; }
+    .hidden { display: none !important; }
+  
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .card, .pill, .soc a, #stageClose { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+    /* ---- Brand row ---- */
+    .brandrow { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 3vw, 34px); flex-wrap: nowrap; }
+    .brandrow .stack { display: flex; flex-direction: column; align-items: center; }
+    .brandlogo { height: clamp(54px, 9vw, 112px); width: auto; filter: drop-shadow(0 0 16px rgba(255, 90, 0, 0.45)); }
+
+    /* ---- Visitor counter ---- */
+    .visitors { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+    .visitors .vlabel { font-size: 10.5px; letter-spacing: 0.32em; color: var(--muted); text-transform: uppercase; }
+    .visitors .vrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .vbadge { height: 22px; border-radius: 5px; box-shadow: 0 0 12px rgba(255, 90, 0, 0.25); }
+      .spotcount { margin: -6px 0 14px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-align: center; }
+    .spotcount b { color: #ffcf9e; text-shadow: 0 0 10px rgba(255,140,40,.5); }
+    .livebox { width: 100%; margin: 0; text-align: center; }
+    .stagelayout { display: grid; grid-template-columns: minmax(250px, 310px) minmax(340px, 1.35fr) minmax(250px, 310px); gap: 18px; align-items: start; width: min(1500px, 100%); margin: 14px auto 0; }
+    .sidecol { display: flex; flex-direction: column; gap: 8px; min-width: 0; text-align: center; }
+    .sidecol h2 { margin: 0; }
+    .sidecol .card { padding: 10px 12px; }
+    .sidecol .cicon { font-size: 20px; }
+    .sidecol .cname { margin-top: 3px; font-size: 14px; }
+    .sidecol .cdesc { margin-top: 3px; font-size: 12px; line-height: 1.45; }
+    .colnote { font-size: 11.5px; line-height: 1.55; color: rgba(255, 214, 170, 0.62); text-align: center; }
+    .colmid { min-width: 0; }
+    @media (max-width: 1150px) { .stagelayout { grid-template-columns: 1fr 1fr; } .colmid { grid-column: 1 / -1; order: -1; } }
+    @media (max-width: 660px) { .stagelayout { grid-template-columns: 1fr; } }
+    /* ---- Mobile breathing room (V1.10): desktop keeps zoom 1.25, phones get air ---- */
+    @media (max-width: 660px) {
+      main { zoom: 1; padding: 26px 14px 46px; }
+      .brandrow { gap: 14px; }
+      .tagline { line-height: 1.65; }
+      .stagelayout { gap: 26px; margin-top: 22px; }
+      .sidecol { gap: 12px; }
+      .sidecol .card { padding: 14px; }
+      .sidecol h2 { margin-bottom: 4px; }
+      .colnote { line-height: 1.7; }
+      .schedline { line-height: 1.65; }
+      .watchnow { line-height: 1.55; }
+      .liveframe { margin-top: 14px; }
+      .liveframe.tall { height: 72vh; }
+      .chatline { margin-top: 12px; line-height: 1.65; }
+      .feedback { margin-top: 20px; }
+      .feedback h2 { white-space: normal; }        /* title may wrap instead of falling off screen */
+      .feedback h2 small { display: block; margin-top: 5px; }  /* 2nd line sits on its own row */
+      .fbrow { margin-bottom: 12px; }
+      footer { margin-top: 26px; }
+    }
+    .schedline { font-size: clamp(12px, 1.6vw, 15px); color: #35d8ff; text-shadow: 0 0 12px rgba(53,216,255,0.55); letter-spacing: 0.04em; }
+    .watchnow { margin-top: 10px; font-weight: 700; font-size: clamp(15px, 2.3vw, 22px); color: #39ff14; text-shadow: 0 0 14px rgba(57,255,20,0.7), 0 0 34px rgba(57,255,20,0.28); letter-spacing: 0.06em; }
+    .livetabs { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+    .ltab { cursor: pointer; padding: 9px 24px; border-radius: 10px 10px 0 0; border: 1px solid rgba(255,140,60,0.35); border-bottom: 0; background: rgba(0,0,0,0.5); color: var(--muted); font: 700 13px Arial, Helvetica, sans-serif; letter-spacing: 0.18em; transition: background 0.15s ease, color 0.15s ease; }
+    .ltab:hover { color: var(--text); }
+    .ltab.kick.on { color: #b9ffb2; border-color: rgba(83,252,24,0.65); background: rgba(83,252,24,0.13); text-shadow: 0 0 12px rgba(83,252,24,0.8); }
+    .ltab.twitch.on { color: #dcc4ff; border-color: rgba(145,70,255,0.7); background: rgba(145,70,255,0.15); text-shadow: 0 0 12px rgba(145,70,255,0.85); }
+    .ltab.video.on { color: #ffd9ad; border-color: rgba(255,149,0,0.7); background: rgba(255,149,0,0.14); text-shadow: 0 0 12px rgba(255,149,0,0.85); }
+    .lico { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; text-decoration: none; font-size: calc(1em - 1px); }
+    .lico img { width: 15px; height: 15px; }
+    .lico.kick { color: #39ff14; border-bottom: 1px dashed rgba(57,255,20,0.6); text-shadow: 0 0 10px rgba(57,255,20,0.8), 0 0 24px rgba(57,255,20,0.4); }
+    .lico.kick:hover { color: #a6ff8f; }
+    .lico.twitch { color: #c06bff; border-bottom: 1px dashed rgba(178,102,255,0.65); text-shadow: 0 0 10px rgba(178,102,255,0.85), 0 0 24px rgba(145,70,255,0.45); }
+    .lico.twitch:hover { color: #e0b8ff; }
+    .stagepop { position: absolute; top: 8px; right: 8px; z-index: 5; cursor: pointer; padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(255,149,0,0.55); background: rgba(0,0,0,0.72); color: #ffd9ad; font: 700 10.5px Arial, Helvetica, sans-serif; letter-spacing: 0.1em; }
+    .stagepop:hover { background: rgba(255,149,0,0.3); }
+    .tagline { transition: opacity 0.45s ease; }
+    .liveempty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 22px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .liveframe { margin-top: 0; position: relative; width: 100%; aspect-ratio: 16/9; border: 1px solid rgba(57,255,20,0.45); border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 0 26px rgba(57,255,20,0.18), inset 0 0 18px rgba(0,0,0,0.6); }
+    .liveframe iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    /* Shorts screens flip the stage to a phone-shaped 9:16 frame (V2.1) */
+    .liveframe.tall { width: auto; height: 52vh; aspect-ratio: 9 / 16; margin: 0 auto; max-width: 100%; }
+    .chatline { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+    .watchnow.wait { color: #ffb000; text-shadow: 0 0 14px rgba(255,176,0,0.7), 0 0 34px rgba(255,176,0,0.3); }
+    .waitline { margin-top: 8px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+    .ftabs { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+    .ftab { cursor: pointer; padding: 9px 22px; border-radius: 10px 10px 0 0; border: 1px solid rgba(255,140,60,0.35); border-bottom: 0; background: rgba(0,0,0,0.5); color: var(--muted); font: 700 13px Arial, Helvetica, sans-serif; letter-spacing: 0.16em; transition: background 0.15s ease, color 0.15s ease; }
+    .ftab:hover { color: var(--text); }
+    .ftab.on { color: #ffd9ad; border-color: rgba(255,149,0,0.7); background: rgba(255,149,0,0.13); text-shadow: 0 0 12px rgba(255,149,0,0.8); }
+    .schedbox { border: 1px solid rgba(255,149,0,0.4); border-top: 0; border-radius: 0 0 12px 12px; background: rgba(0,0,0,0.45); padding: 14px 16px; }
+    .calhead { text-align: center; font-size: 13px; letter-spacing: 0.14em; color: #ffb066; text-transform: uppercase; margin-bottom: 10px; }
+    .calhead small { text-transform: none; }
+    .tzpick { background: rgba(10,5,3,0.9); color: #ffb066; border: 1px solid rgba(255,140,60,0.4); border-radius: 6px; font: 700 11px Arial, sans-serif; letter-spacing: 0.04em; text-transform: none; padding: 2px 6px; max-width: 96%; }
+    a.jumpplan { color: #ffcf8a; text-decoration: underline dotted; cursor: pointer; }
+    .calrow.done { opacity: 0.45; }
+    .onair { color: #39ff14; text-shadow: 0 0 10px rgba(57,255,20,0.6); }
+    .calhead small { color: var(--muted); letter-spacing: 0.06em; }
+    .calrow { display: flex; justify-content: space-between; gap: 12px; padding: 5px 8px; border-radius: 6px; font-size: 13px; color: var(--text); }
+    .calrow:nth-child(odd) { background: rgba(255,149,0,0.05); }
+    .calrow .d { color: #ffd9ad; font-weight: 700; white-space: nowrap; }
+    .calrow .t { color: var(--muted); text-align: right; }
+    .calrow.hot .t { color: #ff9d5c; }
+    .calrow.today { outline: 1px solid rgba(57,255,20,0.45); background: rgba(57,255,20,0.07); }
+    .calrow.live-now .t { color: #7dff7d; font-weight: 700; }
+    .calrow.dim { color: var(--muted); justify-content: center; }
+    .calfoot { margin-top: 10px; text-align: center; font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+    #fbPane .feedback { margin-top: 0; }
+    .chatline a { color: #9effa9; font-weight: 700; text-shadow: 0 0 10px rgba(57,255,20,0.4); }
+    .feedback { width: 100%; margin: 16px auto 0; padding: 16px 18px 14px; border: 1px solid rgba(255,140,60,0.3); border-radius: 14px; background: rgba(255,90,20,0.05); box-shadow: inset 0 0 26px rgba(255,80,20,0.06); }
+    .feedback h2 { margin: 0 0 12px; font-size: clamp(13px, 1.5vw, 16px); letter-spacing: 0.14em; white-space: nowrap; }
+    .feedback h2 small { letter-spacing: 0.06em; }
+    .hp { display: none; }
+    .fbrow { margin-bottom: 10px; }
+    .feedback input, .feedback textarea { width: 100%; box-sizing: border-box; background: rgba(10,5,3,0.88); border: 1px solid rgba(255,140,60,0.35); border-radius: 8px; color: #ffe9d6; padding: 13px 14px; font: 14px Arial, Helvetica, sans-serif; }
+    .feedback textarea { resize: vertical; min-height: 128px; }
+    .feedback input:focus, .feedback textarea:focus { outline: none; border-color: #ff9500; box-shadow: 0 0 12px rgba(255,149,0,0.35); }
+    .fbsend { cursor: pointer; display: block; margin: 2px auto 0; padding: 10px 26px; border-radius: 8px; border: 1px solid #ff9500; background: rgba(255,149,0,0.12); color: #ffd9ad; font: 700 14px Arial, Helvetica, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; }
+    .fbsend:hover { background: rgba(255,149,0,0.28); }
+    .fbnote { min-height: 18px; margin-top: 8px; font-size: 12.5px; text-align: center; }
+    .fbnote.err { color: #ff8896; }
+    .fbnote.ok { color: #9dffa8; }
+  </style>
+</head>
+<body>
+  <canvas id="embers"></canvas>
+
+  <main>
+    <div class="brandrow">
+      <img class="brandlogo" src="assets/logo-red.png" alt="MAVOmusic logo" />
+      <div class="stack">
+        <div class="kicker">WELCOME TO</div>
+    <h1 class="fireline"><span class="fl" style="animation-delay:0ms">M</span><span class="fl" style="animation-delay:110ms">A</span><span class="fl" style="animation-delay:220ms">V</span><span class="fl" style="animation-delay:330ms">O</span><span class="fl" style="animation-delay:440ms">m</span><span class="fl" style="animation-delay:550ms">u</span><span class="fl" style="animation-delay:660ms">s</span><span class="fl" style="animation-delay:770ms">i</span><span class="fl" style="animation-delay:880ms">c</span><span class="fl" style="animation-delay:990ms">!</span></h1>
+      </div>
+      <img class="brandlogo" src="assets/logo-white.png" alt="MAVOmusic logo" />
+    </div>
+    <div class="tagline" id="tagline">
+      <b>Twelve screens, one low end.</b><br />
+      Long-form on the left, shorts on the right, the live stream in the middle.<br />
+      Pick a screen -&gt; press play -&gt; settle in.
+    </div>
+
+    <div id="serverBanner">…</div>
+
+    <div class="stagelayout">
+      <aside class="sidecol">
+        <h2>Long-Form</h2>
+        <div class="spotcount">Total videos in the spotlight: <b id="countLong">…</b></div>
+        <div class="colnote">▶ All YouTube videos - requested by the chat from a 48,000-song list spanning every genre, sight-read live on bass through Rocksmith. Uploaded after the streams, always growing. Views count when YOU press play. 🎯</div>
+      <a class="card" href="pick-and-play.html" data-title="Pick &amp; Play">
+        <div class="cicon">🎯</div>
+        <div class="cname">Pick &amp; Play</div>
+        <div class="cdesc">No autopilot: every track starts with YOUR click. Song ends - five fresh choices appear. The most bulletproof view there is.</div>
+      </a>
+      <a class="card" href="marathon.html" data-title="The Marathon">
+        <div class="cicon">📼</div>
+        <div class="cname">The Marathon</div>
+        <div class="cdesc">Every video back-to-back in full screen with sound - and when it reaches the end, it quietly starts the next lap.</div>
+      </a>
+      <a class="card" href="tv-channels.html" data-title="TV Channels">
+        <div class="cicon">📡</div>
+        <div class="cname">TV Channels</div>
+        <div class="cdesc">Nine channels, one dial. Crackle of static, a tuning shhh, and the next show begins.</div>
+      </a>
+      <a class="card" href="drip.html" data-title="Slow Drip">
+        <div class="cicon">💧</div>
+        <div class="cname">Slow Drip</div>
+        <div class="cdesc">One video an hour, right on the hour, with a big clock counting down. The calmest marathon on Earth.</div>
+      </a>
+      <a class="card" href="radio.html" data-title="MAVO Radio">
+        <div class="cicon">📻</div>
+        <div class="cname">MAVO Radio</div>
+        <div class="cdesc">Ears first: a giant NOW PLAYING card, a live equalizer, and the picture parked in the corner.</div>
+      </a>
+      <a class="card" href="cinema.html" data-title="The Cinema">
+        <div class="cicon">🎬</div>
+        <div class="cname">The Cinema</div>
+        <div class="cdesc">Red curtains, projector flicker, and an old-school film-leader countdown between every feature.</div>
+      </a>
+      </aside>
+      <section class="colmid livebox">
+        <div class="schedline">🗓 LIVE every day - the moment the amber clock below hits 00:00:00, the bass is on. Your own local times wait <a class="jumpplan" href="#schedPane">just under the video ↓</a>. Hit that FOLLOW on <a class="lico kick" href="https://kick.com/mavomusic" target="_blank" rel="noopener"><img src="data:image/x-icon;base64,AAABAAEAMDAAAAEAIACoJQAAFgAAACgAAAAwAAAAYAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8DJQz/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AQsE/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8BCwT/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AhoI/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAFAv8BCAP/AQgD/wEIA/8GPRT/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/EbY8/w+iNf8PojX/D6I1/xXZR/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8QrTn/DYQs/w2ELP8NhCz/BkMW/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPtT/xbnTP8W50z/FudM/xbnTP8ITxr/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPtT/xbnTP8W50z/FudM/xbnTP8ITxr/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8QrTn/DYQs/w2ELP8NhCz/BkMW/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/EbY8/w+iNf8PojX/D6I1/xXZR/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAFAv8BCAP/AQgD/wEIA/8GPRT/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8DJQz/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AQsE/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8BCwT/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AhoI/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" alt="Kick" />Kick</a> or <a class="lico twitch" href="https://www.twitch.tv/mavomusic" target="_blank" rel="noopener"><img src="data:image/x-icon;base64,AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aPgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0WPkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aRz/9AjxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aRz/9IjyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR3/9IjyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkd//SI8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkd//SI8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//o8j//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkd//QI8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR////////qMzv/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkc//QI8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH/////////////sNDf/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkc//QI8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////y+Cw/0WR7/9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gj6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH///////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Gj6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf////////////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Fj5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Gj4AAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH///////////////////////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Gj4AAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf////////////////////////////////////////////////////////////////////////////////////////////+Xwf//RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////////////////////////////////////////////////////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////////////////////////////////////////////////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////9Gkf//RpH///////////////////////9Gkf//RpH///////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////0aR//9Gkf///////////////////////0aR//9Gkf///////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////RpH//0aR////////////////////////RpH//0aR////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////9Gkf//RpH///////////////////////9Gkf//RpH///////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////0aR//9Gkf///////////////////////0aR//9Gkf///////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////RpH//0aR////////////////////////RpH//0aR////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////////////////////////////////////////////////////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////////////////////////////////////////////////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR/wAAAAAAAAAA/9/////P////x////8H////A////wH//wAAD/8AAAf/AAAD/wAAAf8AAAD/AAAA/wAAAH8AAAA/AAAAHwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAAD4AAAA/AAAAP4AAAD/AAAA/4AAAM=" alt="Twitch" />Twitch</a>, your call, and you'll never miss a stream. 💚</div>
+        <div class="watchnow" id="watchNow">🔴 WATCH NOW - the low end is ON AIR. Grab your front-row seat:</div>
+        <div class="waitline" id="waitline" style="display:none"></div>
+        <div class="livetabs" id="stageTabs"></div>
+        <div class="liveframe" id="liveHolder">
+          <div class="liveempty">Pick a platform above - <b>KICK</b> or <b>TWITCH</b> -<br />and the live player loads right here. 📺</div>
+        </div>
+        <div class="chatline" id="liveChat">Want to chat and request songs played live from the list pinned in the chat?
+        That all happens on the <a href="https://kick.com/mavomusic" target="_blank" rel="noopener">official stream page →</a></div>
+
+      <div class="ftabs">
+        <button class="ftab on" data-pane="schedPane" type="button">🗓 SCHEDULE</button>
+        <button class="ftab" data-pane="fbPane" type="button">💬 FEEDBACK</button>
+      </div>
+      <div id="schedPane">
+        <div class="schedbox">
+          <div class="calhead">STREAM PLAN - THE NEXT 12 DAYS <small>· shown for your clock: <select id="tzPick" class="tzpick"></select></small></div>
+          <div id="calRows"><div class="calrow dim">Rolling the next 12 days...</div></div>
+          <div class="calfoot">The rhythm: 4 marathon days, then 4 shorter ones, around the work pattern; streams always start 2PM UK / 14:00. Every time above is already YOUR timezone - auto-detected, tweak it at the top.</div>
+        </div>
+      </div>
+      <div id="fbPane" class="hidden">
+    <section class="feedback">
+      <h2>Say it to the station <small>· lands straight on MAVO's desk</small></h2>
+      <form id="feedbackForm" name="feedback" method="POST" action="https://api.web3forms.com/submit">
+        <input type="hidden" name="access_key" value="b9c525b4-fda9-4b28-bac9-09b1a8c0aa2f" />
+        <input type="hidden" name="subject" value="MAVOmusic site feedback" />
+        <p class="hp"><input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" /></p>
+        <div class="fbrow"><input id="fbName" name="name" type="text" maxlength="40" placeholder="Your name (more than 4 characters)" /></div>
+        <div class="fbrow"><textarea id="fbMsg" name="message" rows="4" maxlength="600" placeholder="Your message - at least 10 characters, emojis welcome 🎸💚🔥❤️"></textarea></div>
+        <button class="fbsend" type="submit">Send it 📮</button>
+        <div id="fbNote" class="fbnote"></div>
+      </form>
+    </section>
+      </div>
+      </section>
+      <aside class="sidecol">
+        <h2>Shorts</h2>
+        <div class="spotcount">Total shorts in the spotlight: <b id="countShort">…</b></div>
+        <div class="colnote">▶ YouTube Shorts - the same bass playthroughs in short form, most pointing at their full-length twin. Same growing database - press play and it counts as a view. 🎯</div>
+      <a class="card" href="shorts-pick-and-play.html" data-title="Shorts Pick &amp; Play">
+        <div class="cicon">👆</div>
+        <div class="cname">Shorts Pick &amp; Play</div>
+        <div class="cdesc">Every short starts with a human press on its own play button - then you pick 1 of 5 again. Suspense as a feature.</div>
+      </a>
+      <a class="card" href="shorts-marathon.html" data-title="Shorts Marathon">
+        <div class="cicon">📱</div>
+        <div class="cname">Shorts Marathon</div>
+        <div class="cdesc">Pure feed energy: every short plays to the very end, then the next one rises with a swipe.</div>
+      </a>
+      <a class="card" href="shorts-tv.html" data-title="Shorts TV">
+        <div class="cicon">📡</div>
+        <div class="cname">Shorts TV</div>
+        <div class="cdesc">Channel-surfing the short stuff - a burst of static, and you're somewhere new.</div>
+      </a>
+      <a class="card" href="shorts-drip.html" data-title="Shorts Drip">
+        <div class="cicon">💧</div>
+        <div class="cname">Shorts Drip</div>
+        <div class="cdesc">One short every fifteen minutes. Even the low end knows patience.</div>
+      </a>
+      <a class="card" href="bass-radio.html" data-title="Bass Radio">
+        <div class="cicon">📻</div>
+        <div class="cname">Bass Radio</div>
+        <div class="cdesc">All killer, no filler: short bass runs with a live equalizer up front and the screen in the corner.</div>
+      </a>
+      <a class="card" href="shorts-cinema.html" data-title="Shorts Cinema">
+        <div class="cicon">🎬</div>
+        <div class="cname">Shorts Cinema</div>
+        <div class="cdesc">The picture-house treatment for sixty-second features: leader countdown, curtains, lights down.</div>
+      </a>
+      </aside>
+    </div>
+
+
+
+    <footer>
+      <div class="rights">MAVOmusic 2026 - All Rights Reserved.</div>
+      <div class="socrow">
+          <span class="soc" title="Kick"><img src="data:image/x-icon;base64,AAABAAEAMDAAAAEAIACoJQAAFgAAACgAAAAwAAAAYAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8DJQz/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AQsE/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8BCwT/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AhoI/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAFAv8BCAP/AQgD/wEIA/8GPRT/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/EbY8/w+iNf8PojX/D6I1/xXZR/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8QrTn/DYQs/w2ELP8NhCz/BkMW/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPtT/xbnTP8W50z/FudM/xbnTP8ITxr/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/F+9P/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPtT/xbnTP8W50z/FudM/xbnTP8ITxr/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8IVhz/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8QrTn/DYQs/w2ELP8NhCz/BkMW/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/EbY8/w+iNf8PojX/D6I1/xXZR/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/w+ZMv8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAFAv8BCAP/AQgD/wEIA/8GPRT/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8Rtzz/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/BTkT/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8FNxL/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/GPxT/xj8U/8Y/FP/DIAq/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8DJQz/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AQsE/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8BCwT/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/BTIR/wUyEf8FMhH/AhoI/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" alt="Kick" width="20" height="20" loading="lazy" /><a href="https://kick.com/mavomusic" target="_blank" rel="noopener">MAVOmusic</a></span>
+          <span class="sep">·</span>
+          <span class="soc" title="Twitch"><img src="data:image/x-icon;base64,AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aPgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0WPkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aRz/9AjxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aRz/9IjyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR3/9IjyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkd//SI8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkd//SI8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//o8j//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkd//QI8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR////////qMzv/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkc//QI8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH/////////////sNDf/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkc//QI8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////y+Cw/0WR7/9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gj6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH///////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Gj6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf////////////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Fj5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Gj4AAAAAAAAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH///////////////////////////////////////////////////////////////////////////////////////+jyP//RpH//0aR//9Gj4AAAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf////////////////////////////////////////////////////////////////////////////////////////////+Xwf//RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////////////////////////////////////////////////////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////////////////////////////////////////////////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////9Gkf//RpH///////////////////////9Gkf//RpH///////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////0aR//9Gkf///////////////////////0aR//9Gkf///////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////RpH//0aR////////////////////////RpH//0aR////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////9Gkf//RpH///////////////////////9Gkf//RpH///////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAP9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////0aR//9Gkf///////////////////////0aR//9Gkf///////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAA/0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////RpH//0aR////////////////////////RpH//0aR////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//////////////////////////////////////////////////////////////////////////////////////////////////0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//////////////////////////////////////////////////////////////////////////////////////////////////RpH//0aR/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//////////////////////////////////////////////////////////////////////////////////////////////////9Gkf//RpH/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/RpN//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR//9Gkf//RpH//0aR/wAAAAAAAAAA/9/////P////x////8H////A////wH//wAAD/8AAAf/AAAD/wAAAf8AAAD/AAAA/wAAAH8AAAA/AAAAHwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAAD4AAAA/AAAAP4AAAD/AAAA/4AAAM=" alt="Twitch" width="20" height="20" loading="lazy" /><a href="https://www.twitch.tv/mavomusic" target="_blank" rel="noopener">MAVOmusic</a></span>
+          <span class="sep">·</span>
+          <span class="soc" title="YouTube"><img src="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8AAAD/EAAA/0AAAP9AAAD/cAAA/4AAAP+AAAD/gAAA/4AAAP+AAAD/QAAA/0AAAP8Q////AP///wD///8AAAD/YAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA/2D///8AAAD/MAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD/MAAA/1AAAP//AAD//wAA//8AAP//AAD//wAA//8QEP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA/2AAAP+AAAD//wAA//8AAP//AAD//wAA//8AAP//4OD//1BQ//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP+AAAD/gAAA//8AAP//AAD//wAA//8AAP//AAD/////////////wMD//yAg//8AAP//AAD//wAA//8AAP//AAD/gAAA/4AAAP//AAD//wAA//8AAP//AAD//wAA/////////////7Cw//8gIP//AAD//wAA//8AAP//AAD//wAA/4AAAP+AAAD//wAA//8AAP//AAD//wAA//8AAP//4OD//0BA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP+AAAD/UAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD/YAAA/zAAAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA/zD///8AAAD/YAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA/2D///8A////AP///wAAAP8QAAD/QAAA/0AAAP+AAAD/gAAA/4AAAP+AAAD/gAAA/4AAAP9AAAD/QAAA/xD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A//8AAP//AADAAwAAgAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAEAAMADAAD//wAA//8AAA==" alt="YouTube" width="20" height="20" loading="lazy" /><a href="https://www.youtube.com/@MAVOmusicYT" target="_blank" rel="noopener">MAVOmusicYT</a></span>
+          <span class="sep">·</span>
+          <span class="soc" title="X"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB7ElEQVR4Ae1XMZLCMAwUdw0ldJQ8ATpKnkBJByUd8ALyA/gBdJTQUtHS8QT4AaRM5ctmThmfogQ75CYNmhGTbGJr45Vk0yAiQzXaF9VsHwIZAofDgYwxqo9GI/K16/X6cqyxvdVqmdvtZh6PhwmCIHXcw7vdrpFj8ny9XhsYxhe8lwWHw2EycLFYpNh0Ok2w8/nsFHy1WrkE1wnAN5tNMkGv10ux3W6XIab5fD5P3ovldCGrP2Ap4LiW8uRJAcIwe1wpArYU0FJimhQgxaQ9cqX4BZYCgSVmS8HBfRP1JQEsY1xKGSmAcTC+l0QrIWDraicVMBBA4O1265ScpQnAMbkMwphjub1HAI7EkxoDK7n0/gQQGATsCmDMo+z++Hf8E5CjPZ9PiqKIZrMZhWFIl8slxcbjMTWbTTqdTuRrXoz5i2WXRIL+WxWw2+Uml13rnJUT4K9E9nMFaF3SxiojoO1u2rJzl4z3/+oIcHBMLiUp2rDe3ozg+BIYtNee87KjGzLGndPx7JD/0K7xog2Gl30ymaSY1jm9CPhsrXnnBK1zOhHgCWWtF7l2TtA6p3S1E+73exoMBrRcLul4PJKL3e93arfbSUeMA1O/36eYPHU6nWQu7pyaqRlfZnezV05anhSN34va7PPXrHYCP+VaTG3LBV1KAAAAAElFTkSuQmCC" alt="X" width="20" height="20" loading="lazy" /><a href="https://x.com/MAVO_music" target="_blank" rel="noopener">MAVO_music</a></span>
+          <span class="sep">·</span>
+          <span class="soc" title="Club"><img src="assets/club-c.png" alt="Club" width="20" height="20" loading="lazy" /><a href="https://club.com/mavomusic" target="_blank" rel="noopener">MAVOmusic</a></span>
+      </div>
+      <div class="visitors" id="visitors">
+        <div class="vlabel">Visitors at the station</div>
+        <div class="vrow" id="visitorRow"></div>
+      </div>
+      <div class="ver">SITE V2.5 &middot; MAVOMUSIC.CO.UK</div>
+    </footer>
+  </main>
+
+  <div id="stage" class="hidden" aria-hidden="true">
+    <div class="stagebar">
+      <span id="stageTitle"></span>
+      <button id="stageClose" title="Or press Esc">✕ Back to station</button>
+    </div>
+    <iframe id="screen" title="MAVOmusic screen"
+      allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    // Spotlight counts (live from playlists.js)
+    (function () {
+      const a = document.getElementById("countLong"), b = document.getElementById("countShort");
+      if (a && window.MAVO_LONGS) a.textContent = window.MAVO_LONGS.length;
+      if (b && window.MAVO_SHORTS) b.textContent = window.MAVO_SHORTS.length;
+    })();
+  </script>
+  <script>
+    // ---- Feedback box ----------------------------------------------------
+    // Validated on the page, delivered by Web3Forms (no server needed).
+    // Engine swapped in V2.3 for the Cloudflare move; access key lives in the form.
+    (function () {
+      const form = document.getElementById("feedbackForm");
+      const note = document.getElementById("fbNote");
+      // word-boundary list - substrings are safe ("bass", "Scunthorpe", "peacock"…)
+      const BAD = ["fuck", "shit", "bitch", "cunt", "dick", "pussy", "whore", "slut",
+        "bastard", "asshole", "wanker", "cock", "nigger", "faggot", "piss"];
+      const badRe = new RegExp("\\b(" + BAD.join("|") + ")\\b", "i");
+      const len = (v) => [...v.trim()].length; // an emoji counts as ONE character
+      function fail(msg) { note.className = "fbnote err"; note.textContent = msg; }
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const name = document.getElementById("fbName").value;
+        const msg = document.getElementById("fbMsg").value;
+        if (len(name) <= 4) return fail("The name needs MORE than 4 characters.");
+        if (badRe.test(name)) return fail("That name is not welcome at this station.");
+        if (len(msg) < 10) return fail("The message needs at least 10 characters.");
+        if (badRe.test(msg)) return fail("Keep it clean - no vulgar words in the message.");
+        try {
+          const res = await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify(Object.fromEntries(new FormData(form)))
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error("HTTP " + res.status);
+          note.className = "fbnote ok";
+          note.textContent = "Thank you, " + name.trim() + " - your words are on MAVO's desk. 🎸";
+          form.reset();
+        } catch (err) {
+          fail("Could not send just now - try again in a moment.");
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    // ---- Stream plan: the work rhythm - 4 free-day marathons, 4 workday sprints ----
+    // Every day has a stream: 4 days of 2PM - 2AM, then 4 days of 2PM - 5PM (UK time).
+    // Overtime? Add that day below as "YYYY-MM-DD": [14, 17] and it switches to short.
+    const STREAM_OVERRIDES = {
+      // "2026-09-03": [14, 17],
+    };
+    const PATTERN_ANCHOR = Date.UTC(2026, 7, 24) / 86400000; // 24 AUG 2026 = first marathon day of an 8-day cycle
+    const LONG_WINDOW = [14, 26], SHORT_WINDOW = [14, 17];
+    function windowForDay(y, m, d) {
+      const key = y + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+      if (STREAM_OVERRIDES[key]) return STREAM_OVERRIDES[key];
+      const idx = Date.UTC(y, m - 1, d) / 86400000;
+      const phase = (((idx - PATTERN_ANCHOR) % 8) + 8) % 8;
+      return phase < 4 ? LONG_WINDOW : SHORT_WINDOW;
+    }
+    (function () {
+      const LONDON = "Europe/London";
+      const fmtUK = new Intl.DateTimeFormat("en-GB", { timeZone: LONDON, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+      const watch = document.getElementById("watchNow");
+      const wait = document.getElementById("waitline");
+      const rows = document.getElementById("calRows");
+      const LIVE_TEXT = "\u{1F534} WATCH NOW - the low end is ON AIR. Grab your front-row seat:";
+
+      // ---- Visitor clock (V2.5): auto-detected timezone, dropdown to override, remembered ----
+      const TZ_LIST = [
+        ["Europe/London", "UK - London"], ["Europe/Dublin", "Dublin"],
+        ["Europe/Paris", "Central Europe - Paris"], ["Europe/Helsinki", "Eastern Europe - Helsinki"],
+        ["Europe/Istanbul", "Istanbul"], ["UTC", "UTC"],
+        ["America/New_York", "US East - New York"], ["America/Chicago", "US Central - Chicago"],
+        ["America/Denver", "US Mountain - Denver"], ["America/Los_Angeles", "US West - Los Angeles"],
+        ["America/Sao_Paulo", "Brazil - Sao Paulo"], ["Asia/Dubai", "Dubai"],
+        ["Asia/Kolkata", "India - Kolkata"], ["Asia/Bangkok", "Bangkok"],
+        ["Asia/Singapore", "Singapore"], ["Asia/Tokyo", "Japan - Tokyo"],
+        ["Australia/Sydney", "Australia - Sydney"], ["Pacific/Auckland", "New Zealand - Auckland"]
+      ];
+      const AUTO_TZ = (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || LONDON;
+      let tzPick = "auto";
+      try { tzPick = localStorage.getItem("mavo_tz") || "auto"; } catch (e) {}
+      function curTZ() { return tzPick === "auto" ? AUTO_TZ : tzPick; }
+      function tzName() {
+        if (tzPick !== "auto") { const f = TZ_LIST.find((t) => t[0] === tzPick); return f ? f[1] : tzPick; }
+        return "auto \xB7 " + String(AUTO_TZ).split("/").pop().replace(/_/g, " ");
+      }
+      const _fmtCache = {};
+      function partsIn(epoch, tz) {
+        const f = _fmtCache[tz] || (_fmtCache[tz] = new Intl.DateTimeFormat("en-GB", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }));
+        const p = {};
+        f.formatToParts(new Date(epoch)).forEach((x) => { p[x.type] = x.value; });
+        return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour, mi: +p.minute, s: +p.second };
+      }
+      const hmIn = (epoch, tz) => { const w = partsIn(epoch, tz); return String(w.h).padStart(2, "0") + ":" + String(w.mi).padStart(2, "0"); };
+      const dayIn = (epoch, tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(new Date(epoch));
+      // London wall clock -> real epoch (two passes settle any DST edge)
+      function lon2epoch(y, m, d, hour) {
+        const guess = Date.UTC(y, m - 1, d, hour);
+        let e = guess;
+        for (let i = 0; i < 2; i++) {
+          const w = partsIn(e, LONDON);
+          e = guess - (Date.UTC(w.y, w.m - 1, w.d, w.h, w.mi, w.s) - e);
+        }
+        return e;
+      }
+
+      function londonNow() {
+        const p = {};
+        fmtUK.formatToParts(new Date()).forEach((x) => { p[x.type] = x.value; });
+        const dayIdx = Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000;
+        return { abs: dayIdx * 86400 + (+p.hour) * 3600 + (+p.minute) * 60 + (+p.second), y: +p.year, m: +p.month, d: +p.day, dayIdx: dayIdx };
+      }
+      function tick() {
+        const now = londonNow();
+        let live = false, nextStart = Infinity, nextE = 0;
+        for (let delta = -1; delta <= 2; delta++) {           // -1 catches past-midnight marathons
+          const dd = new Date((now.dayIdx + delta) * 86400000);
+          const dy = dd.getUTCFullYear(), dm = dd.getUTCMonth() + 1, dday = dd.getUTCDate();
+          const w = windowForDay(dy, dm, dday);
+          const start = (now.dayIdx + delta) * 86400 + w[0] * 3600;
+          const end = (now.dayIdx + delta) * 86400 + w[1] * 3600;
+          if (now.abs >= start && now.abs < end) { live = true; break; }
+          if (start > now.abs && start < nextStart) { nextStart = start; nextE = lon2epoch(dy, dm, dday, w[0]); }
+        }
+        window.MAVO_isLive = live;
+        if (window.MAVO_applyMode) window.MAVO_applyMode(live);
+        if (live) {
+          watch.textContent = LIVE_TEXT;
+          watch.classList.remove("wait");
+          wait.style.display = "none";
+          return;
+        }
+        const left = Math.max(0, Math.floor(nextStart - now.abs));
+        const hh = String(Math.floor(left / 3600)).padStart(2, "0");
+        const mm = String(Math.floor((left % 3600) / 60)).padStart(2, "0");
+        const ss = String(left % 60).padStart(2, "0");
+        watch.textContent = "NEXT STREAM IN " + hh + ":" + mm + ":" + ss;
+        watch.classList.add("wait");
+        const tz = curTZ();
+        wait.innerHTML = "Kicks off at <b>" + hmIn(nextE, tz) + "</b> your time (" + dayIn(nextE, tz) + " \xB7 " + tzName() + ") - the 12-day plan waits <a class=\"jumpplan\" href=\"#schedPane\">just under the video \u2193</a><br />" +
+          "While you wait - the stage below is loaded with videos. Pick LONG-FORM or SHORTS, or tap any card on the sides. Every press of play counts. \u{1F3B8}";
+        wait.style.display = "";
+      }
+
+      // Calendar: next 12 days, one source of truth, drawn in the visitor's own clock.
+      function renderCal() {
+        const todayIdx = londonNow().dayIdx;
+        const nowE = Date.now();
+        const tz = curTZ();
+        let html = "", highlighted = false;
+        for (let i = 0; i < 12; i++) {
+          const date = new Date((todayIdx + i) * 86400000);
+          const y = date.getUTCFullYear(), m = date.getUTCMonth() + 1, d = date.getUTCDate();
+          const w = windowForDay(y, m, d);
+          const startE = lon2epoch(y, m, d, w[0]);
+          const endE = lon2epoch(y, m, d, w[1]);
+          const isLive = nowE >= startE && nowE < endE;
+          const ended = nowE >= endE;
+          const sp = partsIn(startE, tz), ep = partsIn(endE, tz);
+          const wd = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short" }).format(new Date(startE)).toUpperCase();
+          const mon = new Intl.DateTimeFormat("en-GB", { timeZone: tz, month: "short" }).format(new Date(startE)).toUpperCase();
+          const hrs = w[1] - w[0];
+          const spill = ep.d !== sp.d || ep.m !== sp.m;
+          let cls = "calrow" + (hrs >= 12 ? " hot" : ""), label;
+          if (ended) { cls += " done"; label = (i === 0 ? "TODAY" : wd); }
+          else if (!highlighted) { cls += " today"; label = (i === 0 ? "TODAY" : "TOMORROW"); highlighted = true; }
+          else { label = wd; }
+          html += '<div class="' + cls + '"><span class="d">' + label + " " + sp.d + " " + mon + '</span><span class="t">' +
+            hmIn(startE, tz) + " - " + hmIn(endE, tz) + (spill ? " (+1d)" : "") +
+            (isLive ? ' \xB7 <b class="onair">LIVE NOW</b>' : ended ? " \xB7 ended \u2713" : "") +
+            (hrs >= 12 ? " \u{1F525} " + hrs + "h marathon" : "") + "</span></div>";
+        }
+        rows.innerHTML = html;
+      }
+
+      // Timezone picker: auto-detected on load, manual choice is remembered
+      const sel = document.getElementById("tzPick");
+      sel.innerHTML = '<option value="auto">Auto - ' + String(AUTO_TZ).replace(/_/g, " ") + "</option>" +
+        TZ_LIST.map((t) => '<option value="' + t[0] + '">' + t[1] + "</option>").join("");
+      if (TZ_LIST.some((t) => t[0] === tzPick)) sel.value = tzPick;
+      sel.addEventListener("change", function () {
+        tzPick = sel.value;
+        try { localStorage.setItem("mavo_tz", tzPick); } catch (e) {}
+        renderCal();
+      });
+
+      // "under the video ↓" jump links: open the SCHEDULE tab, then glide to it
+      document.addEventListener("click", function (e) {
+        const a = e.target && e.target.closest ? e.target.closest(".jumpplan") : null;
+        if (!a) return;
+        e.preventDefault();
+        const t = document.querySelector('.ftab[data-pane="schedPane"]');
+        if (t) t.click();
+        const p = document.getElementById("schedPane");
+        if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      tick();
+      setInterval(tick, 1000);
+      renderCal();
+      setInterval(renderCal, 60000);   // keeps LIVE NOW / ended tags + midnight rollover fresh
+    })();
+
+    // ---- Schedule / Feedback tabs (same behaviour as KICK/TWITCH) --------
+    (function () {
+      const tabs = document.querySelectorAll(".ftab");
+      tabs.forEach((t) => t.addEventListener("click", () => {
+        tabs.forEach((x) => x.classList.toggle("on", x === t));
+        document.getElementById("schedPane").classList.toggle("hidden", t.dataset.pane !== "schedPane");
+        document.getElementById("fbPane").classList.toggle("hidden", t.dataset.pane !== "fbPane");
+      }));
+    })();
+  </script>
+
+  <script>
+    // ---- Center stage: OFFLINE = two big tabs (LONG-FORM / SHORTS) over the
+    //      video stage. The side cards are the screen pickers - whichever side
+    //      you click, the matching tab above the frame lights up by itself
+    //      (left cards never light SHORTS, right cards never light LONG-FORM).
+    //      LIVE = KICK / TWITCH tabs with the real stream. Swap is automatic. ----
+    (function () {
+      const LIVE_TABS = [
+        { key: "kick", label: "\u{1F7E2} KICK", cls: "kick" },
+        { key: "twitch", label: "\u{1F7E3} TWITCH", cls: "twitch" }
+      ];
+      const CAT_TABS = [
+        { key: "long", label: "\u{1F3AC} LONG-FORM" },
+        { key: "shorts", label: "\u{1F4F1} SHORTS" }
+      ];
+      // The side-card menus made into data: first entry = the screen its tab opens on.
+      const SHELF = {
+        long: [
+          { file: "pick-and-play.html", title: "Pick & Play" },
+          { file: "marathon.html", title: "The Marathon" },
+          { file: "tv-channels.html", title: "TV Channels" },
+          { file: "drip.html", title: "Slow Drip" },
+          { file: "radio.html", title: "MAVO Radio" },
+          { file: "cinema.html", title: "The Cinema" }
+        ],
+        shorts: [
+          { file: "shorts-pick-and-play.html", title: "Shorts Pick & Play" },
+          { file: "shorts-marathon.html", title: "Shorts Marathon" },
+          { file: "shorts-tv.html", title: "Shorts TV" },
+          { file: "shorts-drip.html", title: "Shorts Drip" },
+          { file: "bass-radio.html", title: "Bass Radio" },
+          { file: "shorts-cinema.html", title: "Shorts Cinema" }
+        ]
+      };
+      const SRC_LIVE = {
+        kick: "https://player.kick.com/mavomusic?autoplay=true&muted=false",
+        twitch: "https://player.twitch.tv/?channel=mavomusic&autoplay=true&muted=false&parent=" + location.hostname
+      };
+      const PAGE = {
+        kick: ["https://kick.com/mavomusic", "Kick"],
+        twitch: ["https://www.twitch.tv/mavomusic", "Twitch"]
+      };
+      const tabsBox = document.getElementById("stageTabs");
+      const holder = document.getElementById("liveHolder");
+      const chat = document.getElementById("liveChat");
+      let mode = null, cat = "long", loadedLive = null, stageLoaded = null;
+
+      function tabButton(cls, key, label, onClick) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ltab " + cls;
+        b.dataset.key = key;
+        b.innerHTML = label;
+        b.addEventListener("click", onClick);
+        return b;
+      }
+      function renderTabs() {
+        tabsBox.innerHTML = "";
+        const row = document.createElement("div");
+        row.className = "livetabs";
+        if (mode === "live") {
+          LIVE_TABS.forEach((t) => row.appendChild(tabButton(t.cls, t.key, t.label, () => loadLive(t.key))));
+        } else {
+          CAT_TABS.forEach((t) => row.appendChild(tabButton("video", t.key, t.label, () => loadCategory(t.key))));
+        }
+        tabsBox.appendChild(row);
+        markActive();
+      }
+      function markActive() {
+        const want = mode === "live" ? loadedLive : cat;
+        tabsBox.querySelectorAll(".ltab").forEach((x) => x.classList.toggle("on", x.dataset.key === want));
+      }
+      function putFrame(src, title) {
+        holder.innerHTML = "";
+        const f = document.createElement("iframe");
+        f.src = src;
+        f.title = title;
+        f.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture";
+        f.allowFullscreen = true;
+        holder.appendChild(f);
+      }
+      function loadLive(which) {
+        holder.classList.remove("tall");
+        if (loadedLive !== which || stageLoaded) {
+          putFrame(SRC_LIVE[which], "MAVOmusic live on " + PAGE[which][1]);
+          stageLoaded = null;
+        }
+        loadedLive = which;
+        markActive();
+        chat.style.display = "";
+        chat.innerHTML = 'Have a song in mind? The request list runs 48,000 deep - every genre, sight-read on bass through Rocksmith. Chat &amp; requests happen on the <a href="' + PAGE[which][0] + '" target="_blank" rel="noopener">official stream page -&gt;</a>';
+      }
+      function loadStage(file, title) {
+        holder.classList.toggle("tall", /^(shorts-|bass-)/.test(String(file))); // shorts get a phone-shaped frame
+        putFrame(file, title || "MAVOmusic screen");
+        stageLoaded = { file: file, title: title || "MAVOmusic" };
+        loadedLive = null;
+        chat.style.display = "none";
+        const pop = document.createElement("button");
+        pop.type = "button";
+        pop.className = "stagepop";
+        pop.textContent = "\u26F6 BIG";
+        pop.title = "Open this screen full size";
+        pop.addEventListener("click", () => {
+          if (stageLoaded && window.MAVO_openScreen) window.MAVO_openScreen(stageLoaded.file, stageLoaded.title);
+        });
+        holder.appendChild(pop);
+        markActive();
+      }
+      // A category tab press lights that tab and opens its shelf's front screen.
+      // Every press is a fresh load, so a fresh shuffled queue too (V2.0 rule).
+      function loadCategory(key) {
+        cat = key;
+        markActive();
+        loadStage(SHELF[key][0].file, SHELF[key][0].title);
+      }
+      function applyMode(isLive) {
+        const m = isLive ? "live" : "off";
+        if (mode === m) return;
+        mode = m;
+        loadedLive = null;
+        stageLoaded = null;
+        if (m !== "live") cat = "long"; // mode flips always re-open on LONG-FORM
+        if (m === "live") {
+          renderTabs();
+          loadLive("kick");
+        } else {
+          renderTabs();
+          chat.style.display = "none";
+          loadStage(SHELF.long[0].file, SHELF.long[0].title);
+        }
+      }
+      window.MAVO_applyMode = applyMode;
+      // Offline rule: side-column cards play INSIDE the stage instead of the overlay,
+      // and the tab above the frame always follows the side the click came from.
+      window.MAVO_routeToStage = function (file, title) {
+        if (mode !== "off") return false;
+        // Netlify pretty URLs serve the cards as "/name" while the shelf knows "name.html"
+        // - match by bare page name so both shapes work (this was the stuck-tab bug, V2.1).
+        const norm = String(file || "").split("/").pop().replace(/\.html$/, "");
+        let hit = null;
+        for (const c of ["long", "shorts"]) {
+          hit = SHELF[c].find((t) => t.file.replace(/\.html$/, "") === norm) || null;
+          if (hit) { cat = c; break; }
+        }
+        markActive();
+        if (hit) loadStage(hit.file, hit.title);
+        else loadStage(file, title || "MAVOmusic");
+        document.getElementById("liveHolder").scrollIntoView({ behavior: "smooth", block: "center" });
+        return true;
+      };
+      applyMode(window.MAVO_isLive === true);
+    })();
+
+    // ---- Tagline wheel - six mottos for desktop, six written for phones ----
+    (function () {
+      const LINES_PC = [
+        ["Twelve screens, one low end.", "Long-form on the left, shorts on the right, the live stream in the middle.", "Pick a screen -&gt; press play -&gt; settle in."],
+        ["48,000 songs deep, one bass low.", "Every genre on request, sight-read live through Rocksmith.", "Pick a shelf -&gt; press play -&gt; hear it happen."],
+        ["The bass station that never sleeps.", "Marathons left, bursts right, live center stage.", "Pick a screen -&gt; press play -&gt; feel the floor."],
+        ["Every play feeds the low end.", "Shorts point to their full-length twins - chase them both.", "Left, right or live -&gt; hit play -&gt; done."],
+        ["Where the bass never clocks out.", "Six theatres one side, six quick bursts the other.", "Choose a screen -&gt; press play -&gt; turn it up."],
+        ["Built on four strings and Rocksmith reflexes.", "Fresh off the stream and into the vault, daily.", "Scroll -&gt; click -&gt; bang your head."]
+      ];
+      const LINES_PH = [
+        ["Twelve screens, one low end.", "The live stream up top, the shelves waiting below.", "Scroll down -&gt; press play -&gt; settle in."],
+        ["48,000 songs deep, one bass low.", "Every genre on request, sight-read live through Rocksmith.", "Scroll -&gt; tap -&gt; hear it happen."],
+        ["The bass station that never sleeps.", "Live up top, twelve screens under it.", "Scroll down -&gt; tap play -&gt; feel the floor."],
+        ["Every play feeds the low end.", "Shorts point to their full-length twins - chase them both.", "Tap a shelf -&gt; press play -&gt; done."],
+        ["Where the bass never clocks out.", "Six theatres, six quick bursts, one scroll away.", "Tap -&gt; play -&gt; turn it up."],
+        ["Built on four strings and Rocksmith reflexes.", "New videos land right under the stage.", "Scroll less -&gt; press play -&gt; enjoy more."]
+      ];
+      const el = document.getElementById("tagline");
+      const mq = matchMedia("(max-width: 660px)");
+      let i = 0;
+      function draw() {
+        const set = mq.matches ? LINES_PH : LINES_PC;
+        const l = set[i % set.length];
+        el.innerHTML = "<b>" + l[0] + "</b><br />" + l[1] + "<br />" + l[2];
+      }
+      draw();
+      setInterval(() => {
+        i++;
+        el.style.opacity = 0;
+        setTimeout(() => { draw(); el.style.opacity = 1; }, 450);
+      }, 7000);
+      mq.addEventListener("change", draw);
+    })();
+  </script>
+
+  <script>
+    // ---- Theatre overlay ------------------------------------------------
+    // Screens open inside THIS page, so the address bar never leaves home.
+    (function () {
+      const stage = document.getElementById("stage");
+      const frame = document.getElementById("screen");
+      const label = document.getElementById("stageTitle");
+
+      let live = false;
+      const slugFor = (file) => file.replace(/\.html$/, "");
+
+      function openScreen(file, title, viaHistory) {
+        frame.src = file;
+        label.textContent = title + " - LIVE";
+        stage.classList.remove("hidden");
+        document.documentElement.style.overflow = "hidden";
+        requestAnimationFrame(() => stage.classList.add("live"));
+        live = true;
+        // The address bar stays mavomusic.co.uk (#screen-name) and Back closes the screen.
+        if (!viaHistory) history.pushState({ mavoScreen: file }, "", "#" + slugFor(file));
+      }
+      function closeScreen(viaHistory) {
+        if (!live) return;
+        stage.classList.remove("live");
+        document.documentElement.style.overflow = "";
+        frame.src = "about:blank";
+        setTimeout(() => stage.classList.add("hidden"), 300);
+        live = false;
+        if (!viaHistory && history.state && history.state.mavoScreen) history.back();
+      }
+      window.addEventListener("popstate", (e) => {
+        if (e.state && e.state.mavoScreen) {
+          const want = String(e.state.mavoScreen).split("/").pop().replace(/\.html$/, "");
+          const card = document.querySelector('.card[href="' + want + '.html"], .card[href="/' + want + '"]');
+          openScreen(e.state.mavoScreen, card ? card.dataset.title || "MAVOmusic" : "MAVOmusic", true);
+        } else {
+          closeScreen(true);
+        }
+      });
+      window.MAVO_openScreen = openScreen;
+      document.querySelectorAll(".card").forEach((card) => {
+        card.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (window.MAVO_routeToStage && window.MAVO_routeToStage(card.getAttribute("href"), card.dataset.title || "MAVOmusic")) return;
+          openScreen(card.getAttribute("href"), card.dataset.title || "MAVOmusic");
+        });
+      });
+      document.getElementById("stageClose").addEventListener("click", closeScreen);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeScreen();
+      });
+      // Deep link: opening mavomusic.co.uk/#shorts-marathon jumps straight into that screen.
+      (function () {
+        const slug = location.hash.replace(/^#\/?/, "").replace(/\.html$/, "");
+        if (!slug) return;
+        const card = document.querySelector('.card[href="' + slug + '.html"], .card[href="/' + slug + '"]');
+        if (!card) return;
+        history.replaceState({}, "", location.pathname);
+        openScreen(card.getAttribute("href"), card.dataset.title || "MAVOmusic");
+      })();
+    })();
+
+    // ---- Floating embers --------------------------------------------------
+    (function () {
+      const canvas = document.getElementById("embers");
+      const ctx = canvas.getContext("2d");
+      let W, H, sparks = [];
+      function size() {
+        W = canvas.width = innerWidth; H = canvas.height = innerHeight;
+      }
+      function spawn(initial) {
+        return {
+          x: Math.random() * W,
+          y: initial ? Math.random() * H : H + 8,
+          r: 1.4 + Math.random() * 3.0,
+          s: 0.25 + Math.random() * 0.7,
+          drift: (Math.random() - 0.5) * 0.35,
+          a: 0.3 + Math.random() * 0.62,
+          hue: 18 + Math.random() * 26
+        };
+      }
+      size(); addEventListener("resize", size);
+      for (let i = 0; i < 64; i++) sparks.push(spawn(true));
+      (function frame() {
+        ctx.clearRect(0, 0, W, H);
+        sparks.forEach((p, i) => {
+          p.y -= p.s; p.x += p.drift;
+          if (p.y < -10) sparks[i] = spawn(false);
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = "rgba(255,120,20," + p.a + ")";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = "hsla(" + p.hue + ", 100%, 60%, " + p.a + ")";
+          ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+        requestAnimationFrame(frame);
+      })();
+    })();
+
+    // ---- Environment-aware banner -----------------------------------------
+    (function () {
+      const banner = document.getElementById("serverBanner");
+      const page = location.pathname.split("/").pop() || "index.html";
+      if (location.protocol === "file:") {
+        banner.className = "warn";
+        banner.innerHTML =
+          "⚠ <b>Opened directly (file://) - YouTube will answer Error 153.</b><br>" +
+          "Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/</b> " +
+          "- or visit the live site: <b>https://mavomusic.co.uk</b>";
+      } else if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+        banner.className = "ok";
+        banner.textContent =
+          "✓ Local test bench - embeds work here. Never close the black console window while watching.";
+      } else {
+        banner.style.display = "none"; // no banner needed on the live site
+      }
+    })();
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+
+    // ---- Visitor counter --------------------------------------------------
+    // Free badge counters (visitor-badge.laobi.icu) with period-rotating IDs:
+    // TODAY resets daily, THIS WEEK weekly, THIS MONTH monthly, ALL TIME forever.
+    (function () {
+      const row = document.getElementById("visitorRow");
+      if (!row) return;
+      function pad(n) { return (n < 10 ? "0" : "") + n; }
+      const d = new Date();
+      const dayKey = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+      const wdt = new Date(d.getTime());
+      wdt.setHours(0, 0, 0, 0);
+      wdt.setDate(wdt.getDate() + 3 - ((wdt.getDay() + 6) % 7));
+      const week1 = new Date(wdt.getFullYear(), 0, 4);
+      const week = 1 + Math.round(((wdt - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+      const weekKey = wdt.getFullYear() + "-W" + pad(week);
+      const monthKey = d.getFullYear() + "-" + pad(d.getMonth() + 1);
+      const base = "https://visitor-badge.laobi.icu/badge?page_id=mavomusic-site.";
+      const style = "&left_color=1a0d05&right_color=ff4500";
+      const defs = [
+        ["TODAY", "day-" + dayKey],
+        ["THIS WEEK", "week-" + weekKey],
+        ["THIS MONTH", "month-" + monthKey],
+        ["ALL TIME", "total"],
+      ];
+      defs.forEach(function (def) {
+        const img = new Image();
+        img.className = "vbadge";
+        img.alt = def[0] + " visitors";
+        img.title = def[0] + " visitors";
+        img.src = base + def[1] + "&title=" + encodeURIComponent(def[0]) + style;
+        img.onerror = function () { img.style.display = "none"; };
+        row.appendChild(img);
+      });
+    })();
+  </script>
+</body>
+</html>

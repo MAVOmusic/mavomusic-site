@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shorts Pick &amp; Play - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #070604;
+      --line: rgba(255, 176, 0, 0.5);
+      --line-dim: rgba(255, 176, 0, 0.2);
+      --text: #fff4dd;
+      --muted: rgba(255, 244, 221, 0.68);
+      --accent: #ffb000;
+    }
+    * { box-sizing: border-box; }
+    html, body, a, button, .pill, .pick { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 4px);
+      opacity: .5; mix-blend-mode: screen; }
+
+    .mavo-embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+    #screen { position: relative; z-index: 2; }
+
+    #stage { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px;
+      background: radial-gradient(circle at center, rgba(180, 110, 0, 0.14), transparent 55%), #030302; }
+    #screen { width: min(92vw, calc(84vh * 9 / 16)); aspect-ratio: 9 / 16;
+      background: #000; border: 1px solid var(--line-dim); border-radius: clamp(0px, 2vh, 20px); overflow: hidden;
+      box-shadow: 0 0 50px rgba(255, 176, 0, 0.12); }
+    #player, #screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+    #hint { position: relative; z-index: 2; max-width: 84vw; text-align: center; color: var(--muted);
+      font-size: 13px; letter-spacing: 0.06em; }
+    #hint b { color: var(--accent); }
+
+    #controls { position: fixed; right: 10px; top: 10px; z-index: 25; display: flex; gap: 8px; }
+    .pill { padding: 6px 10px; border: 1px solid var(--line-dim); border-radius: 999px;
+      background: rgba(0,0,0,0.72); color: var(--muted); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; text-decoration: none; }
+    .pill:hover { color: var(--text); border-color: var(--line); }
+    #handCount { position: fixed; left: 10px; top: 10px; z-index: 25; padding: 6px 12px;
+      border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.72);
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text); }
+    #handCount b { color: var(--accent); }
+
+    #picker { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px; padding: 24px;
+      background: radial-gradient(circle at center, rgba(180,110,0,0.16), transparent 55%), rgba(3,3,2,0.965); }
+    .hidden { display: none !important; }
+    .kicker { letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); font-size: clamp(10px, 1.4vw, 14px); }
+    .title { font-size: clamp(18px, 3vw, 32px); text-shadow: 0 0 14px rgba(255, 176, 0, 0.45); text-align: center; }
+    #pickRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 96vw; }
+    .pick { width: min(28vw, 170px); border: 1px solid var(--line-dim); border-radius: 12px; overflow: hidden;
+      background: #0a0805; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+    .pick:hover { transform: translateY(-4px); border-color: var(--line); box-shadow: 0 10px 30px rgba(255,176,0,0.2); }
+    .pick img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; display: block; background: #000; }
+    .pick span { display: block; padding: 8px 9px 9px; font-size: 11px; line-height: 1.4; color: var(--text); min-height: 48px; }
+    .dim { color: var(--muted); font-size: 12.5px; max-width: 76vw; text-align: center; line-height: 1.6; }
+
+    /* ---- Compact mode: small stage frames + phones (V2.1) ---- */
+    @media (max-height: 560px), (max-width: 480px) {
+      #stage { gap: 8px; }
+      #screen { width: min(96vw, calc((100vh - 60px) * 9 / 16)); }
+      #hint { font-size: 11.5px; line-height: 1.45; }
+      #picker { gap: 10px; padding: 10px; justify-content: flex-start; overflow-y: auto; }
+      .kicker { font-size: 10px; }
+      .title { font-size: 15px; }
+      #pickRow { gap: 8px; }
+      .pick { width: min(30vw, 120px); }
+      .pick span { min-height: 0; padding: 4px 5px; font-size: 9.5px; line-height: 1.3;
+        display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+      .dim { display: none; }
+      #controls { top: 4px; right: 4px; gap: 5px; }
+      #handCount { top: 4px; left: 4px; padding: 4px 8px; font-size: 9.5px; }
+      .pill { padding: 4px 8px; font-size: 9.5px; }
+    }
+
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="handCount">STARTED BY HAND: <b id="handNum">0</b></div>
+
+  <div id="stage">
+    <div id="screen"><div id="player"></div></div>
+    <div id="hint" class="hidden">👆 Your move - press <b>▶ on the video itself</b>.</div>
+  </div>
+
+  <div id="controls">
+    <button id="shuffleBtn" class="pill" title="Deal five fresh choices">Fresh five 🎲</button>
+    <button id="fsBtn" class="pill" title="Real fullscreen (or press F)">Fullscreen ⛶</button>
+    <a class="pill" href="/" target="_top" title="Back to the station">☰ Station</a>
+  </div>
+
+  <div id="picker">
+    <div class="kicker">Shorts Pick &amp; Play</div>
+    <div class="title" id="pickTitle">Choose your next short</div>
+    <div id="pickRow"></div>
+    <div class="dim">
+      No autopilot in this room: every short starts only when a real human presses its own
+      play button. When it ends, five fresh choices appear.
+    </div>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * The list lives in playlists.js (same folder). EDIT THERE.
+     *****************************************************************/
+    const shorts = (window.MAVO_SHORTS || []);
+    const pickCount = 5;
+
+    const $ = (id) => document.getElementById(id);
+    let player = null, ytReady = false, pendingId = null, startedByHand = 0, currentId = null;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) return url.pathname.split("/").filter(Boolean)[0] || raw;
+        const v = url.searchParams.get("v"); if (v) return v;
+        const m = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (m) return m[2];
+      } catch (err) {}
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+    shorts.forEach((v) => { v.id = extractVideoId(v.url || v.id); });
+
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function dealFive() {
+      const pool = shorts.filter((v) => v.id !== currentId);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      return pool.slice(0, Math.min(pickCount, pool.length));
+    }
+
+    function showPicker() {
+      hide($("hint"));
+      const row = $("pickRow");
+      row.innerHTML = "";
+      const five = dealFive();
+      if (five.length === 0) {
+        $("pickTitle").textContent = "The crate is empty - add shorts to playlists.js";
+        show($("picker"));
+        return;
+      }
+      $("pickTitle").textContent = startedByHand === 0 ? "Choose the first short" : "Nice one. Choose the next short";
+      five.forEach((video) => {
+        const card = document.createElement("div");
+        card.className = "pick";
+        card.innerHTML =
+          '<img src="https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg" alt="" loading="lazy" />' +
+          "<span>" + video.title + "</span>";
+        card.addEventListener("click", () => choose(video));
+        row.appendChild(card);
+      });
+      show($("picker"));
+    }
+
+    function choose(video) {
+      currentId = video.id;
+      hide($("picker"));
+      show($("hint"));
+      if (player && typeof player.cueVideoById === "function") {
+        player.cueVideoById(video.id);
+      } else if (ytReady) {
+        createPlayer(video.id);
+      } else {
+        pendingId = video.id;
+      }
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%", height: "100%", videoId: videoId,
+        playerVars: { autoplay: 0, controls: 1, rel: 0, playsinline: 1, modestbranding: 1 },
+        events: { onStateChange: onState }
+      });
+    }
+
+    let countedId = null;
+    function onState(e) {
+      if (e.data === YT.PlayerState.PLAYING && countedId !== currentId) {
+        countedId = currentId;
+        startedByHand += 1;
+        $("handNum").textContent = String(startedByHand);
+      }
+      if (e.data === YT.PlayerState.ENDED) {
+        $("pickTitle").textContent = "Short finished. Your pick again:";
+        showPicker();
+      }
+    }
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+    $("fsBtn").addEventListener("click", toggleFullscreen);
+    $("shuffleBtn").addEventListener("click", showPicker);
+    document.addEventListener("keydown", (e) => { if (e.key === "f" || e.key === "F") toggleFullscreen(); });
+
+    window.onYouTubeIframeAPIReady = function () {
+      ytReady = true;
+      if (pendingId !== null) { const id = pendingId; pendingId = null; createPlayer(id); }
+    };
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    showPicker();
+  </script>
+  <script>
+    // Burning embers - they bounce off the shorts box instead of drifting over the video.
+    (function () {
+      const c = document.createElement("canvas");
+      c.className = "mavo-embers";
+      document.body.appendChild(c);
+      const x = c.getContext("2d");
+      const blockEl = document.querySelector("#phone, #screen, #miniPlayer");
+      let W, H, R = null, P = [];
+      function measure() { R = blockEl ? blockEl.getBoundingClientRect() : null; }
+      function rs() { W = c.width = innerWidth; H = c.height = innerHeight; measure(); }
+      rs(); addEventListener("resize", rs); setInterval(measure, 500);
+      const mb = matchMedia("(max-width: 660px)").matches; // phones: classic ember size (V2.1)
+      function mk(anywhere) {
+        const flare = Math.random() < 0.12; // a few fat slow coals
+        return { x: Math.random() * W, y: anywhere ? Math.random() * H : H + 8 + Math.random() * 60,
+          r: mb ? (flare ? 3.4 + Math.random() * 2.4 : 1.3 + Math.random() * 3.2) : (flare ? 4.6 + Math.random() * 3.2 : 1.8 + Math.random() * 4.0),
+          vy: (flare ? 0.3 : 0.55) + Math.random() * 1.35,
+          vx: (Math.random() - 0.5) * 1.0, tw: Math.random() * Math.PI * 2,
+          hue: 16 + Math.random() * 34, hot: Math.random() < (mb ? 0.18 : 0.24), hit: 0 };
+      }
+      for (let i = 0; i < (mb ? 130 : 150); i++) P.push(mk(true));
+      (function frame() {
+        x.clearRect(0, 0, W, H);
+        P.forEach((p, i) => {
+          if (R) {
+            const pad = 5 + p.r;
+            const insideX = p.x > R.left - pad && p.x < R.right + pad;
+            const insideY = p.y > R.top - pad && p.y < R.bottom + pad;
+            if (insideX && insideY) {
+              // bounced off a side wall - never inside the box
+              const mid = (R.left + R.right) / 2;
+              const leftOut = p.x < mid;
+              p.x = leftOut ? R.left - pad : R.right + pad;
+              p.vx = (leftOut ? -1 : 1) * (1.2 + Math.random() * 0.8);
+              p.hit = 8;
+            } else if (insideX && p.y <= R.bottom + pad + 34 && p.y > R.bottom + pad) {
+              // approaching the box from below - slide off sideways before entering
+              const mid = (R.left + R.right) / 2;
+              p.vx += (p.x < mid ? -0.35 : 0.35);
+              if (p.vx > 3) p.vx = 3;
+              if (p.vx < -3) p.vx = -3;
+              p.hit = Math.max(p.hit, 2);
+            }
+          }
+          p.y -= p.vy; p.x += p.vx + Math.sin((p.y + p.tw * 90) / 55) * 0.45; p.tw += 0.06;
+          if (p.hit > 0) p.hit--;
+          if (p.y < -14 || p.x < -14 || p.x > W + 14) P[i] = mk(false);
+          const a = Math.min(1, 0.45 + 0.55 * Math.abs(Math.sin(p.tw)) + (p.hit ? 0.35 : 0));
+          x.shadowBlur = mb ? 16 : 26; x.shadowColor = "rgba(255,120,20," + a + ")";
+          x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.283);
+          x.fillStyle = p.hot ? "hsla(48,100%,72%," + a + ")" : "hsla(" + p.hue + ",100%,58%," + a + ")";
+          x.fill();
+        });
+        x.shadowBlur = 0; requestAnimationFrame(frame);
+      })();
+    })();
+  </script>
+  <script>
+    // Dual neon slap waves (green + blue), random size, drifting upwards.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+  <script>
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText =
+        "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;" +
+        "max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;" +
+        "background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;" +
+        "font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML =
+        "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>" +
+        "Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" + page + "</b> - or visit <b>mavomusic.co.uk</b>.";
+      document.body.appendChild(warn);
+    }
+  </script>
+</body>
+</html>
