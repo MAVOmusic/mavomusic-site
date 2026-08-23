@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Cinema - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #070203;
+      --edge: rgba(255, 120, 60, 0.4);
+      --edge-dim: rgba(255, 120, 60, 0.16);
+      --text: #ffe9d6;
+      --muted: rgba(255, 233, 214, 0.68);
+      --accent: #ff7a26;
+      --velvet: #4a0505;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 4px);
+      opacity: .5; mix-blend-mode: screen;
+    }
+
+    /* Velvet curtains framing the screen */
+    .curtain { position: fixed; top: 0; bottom: 0; width: 7vw; z-index: 5; pointer-events: none;
+      background: repeating-linear-gradient(90deg, #6b0808 0 14px, #3d0303 14px 26px, #560606 26px 40px);
+      box-shadow: inset 0 -80px 120px rgba(0,0,0,.8);
+    }
+    .curtain.left  { left: 0;  box-shadow: inset -30px 0 50px rgba(0,0,0,.85); }
+    .curtain.right { right: 0; box-shadow: inset 30px 0 50px rgba(0,0,0,.85); }
+    .valance { position: fixed; top: 0; left: 0; right: 0; height: 34px; z-index: 6; pointer-events: none;
+      background: repeating-linear-gradient(90deg, #6b0808 0 26px, #3d0303 26px 52px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.8); border-bottom: 1px solid rgba(255,180,80,.25);
+    }
+
+    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at center, rgba(120, 30, 5, 0.22), transparent 55%), #030102; }
+    #screen { position: relative; width: min(86vw, calc(88vh * 16 / 9)); aspect-ratio: 16 / 9; overflow: hidden;
+      background: #000; border: 1px solid var(--edge-dim);
+      box-shadow: 0 0 60px rgba(255, 110, 30, 0.15), 0 0 160px rgba(255, 80, 20, 0.08); }
+    #player, #screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+
+    .hud { position: fixed; left: 10px; top: 44px; z-index: 25; display: flex; align-items: center; gap: 8px;
+      max-width: calc(100vw - 330px); padding: 6px 10px; border: 1px solid var(--edge-dim); border-radius: 999px;
+      background: rgba(0,0,0,0.72); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--accent);
+      box-shadow: 0 0 10px var(--accent); animation: blink 1.2s infinite; }
+    #controls { position: fixed; right: 10px; top: 44px; z-index: 25; display: flex; gap: 8px; }
+    .pill { cursor: pointer; padding: 6px 10px; border: 1px solid var(--edge-dim); border-radius: 999px;
+      background: rgba(0,0,0,0.72); color: var(--muted); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; text-decoration: none; }
+    .pill:hover { color: var(--text); border-color: var(--edge); }
+
+    #nextUp { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20; max-width: 90vw;
+      padding: 7px 11px; border: 1px solid var(--edge-dim); border-radius: 999px; background: rgba(0,0,0,0.74);
+      color: var(--muted); font-size: 12px; letter-spacing: 0.05em; pointer-events: none;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ---- Compact mode: small stage frames + phones - nothing covers the film (V2.1) ---- */
+    @media (max-height: 560px), (max-width: 560px) {
+      .valance { display: none; }
+      .curtain { width: 4vw; }
+      #screen { width: min(94vw, calc((100vh - 54px) * 16 / 9)); }
+      #controls { top: 4px; right: 4px; gap: 5px; }
+      .pill { padding: 4px 8px; font-size: 9.5px; }
+      .hud { top: 4px; left: 4px; padding: 4px 8px; font-size: 10px; max-width: calc(100vw - 190px); }
+      #nextUp { bottom: 4px; padding: 5px 9px; font-size: 10px; max-width: 80vw; }
+    }
+
+    /* ---- Film leader between features ---- */
+    #leader { position: fixed; inset: 0; z-index: 28; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2.2vmin; background: #000;
+      opacity: 0; pointer-events: none; transition: opacity .45s ease; }
+    #leader.on { opacity: 1; pointer-events: auto; }
+    .grain { position: absolute; inset: -40px; pointer-events: none; opacity: 0.10;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px),
+                  repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 1px, transparent 1px 5px);
+      animation: grain .13s steps(3) infinite; }
+    @keyframes grain { 0%{transform:translate(0,0)} 33%{transform:translate(-18px,9px)} 66%{transform:translate(11px,-14px)} 100%{transform:translate(0,0)} }
+    .leadKick { color: #d9c9a8; letter-spacing: 0.4em; text-transform: uppercase; font-size: clamp(10px, 1.8vmin, 15px); opacity: .85; }
+    .ringwrap { position: relative; width: 46vmin; height: 46vmin; }
+    .ring { position: absolute; border-radius: 50%; border: 1.2vmin solid #d9c9a8; }
+    .ring.outer { inset: 0; opacity: .9; }
+    .ring.inner { inset: 8.5vmin; opacity: .9; }
+    .cross { position: absolute; background: #d9c9a8; opacity: .5; animation: spin 3.2s linear infinite; }
+    .cross.h { left: 0; right: 0; top: 50%; height: 2px; }
+    .cross.v { top: 0; bottom: 0; left: 50%; width: 2px; }
+    @keyframes spin { to { transform: rotate(90deg); } }
+    #countNum { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #e8d9c0; font-size: 24vmin; font-weight: 800; font-family: "Courier New", monospace;
+      text-shadow: 0 0 4vmin rgba(255,240,210,.35); }
+    #leadTitle { color: var(--muted); font-size: clamp(12px, 2.4vmin, 20px); max-width: 86vw;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .06em; }
+
+    .overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px; text-align: center; padding: 24px;
+      background: radial-gradient(circle at center, rgba(120, 30, 5, 0.25), transparent 55%), rgba(3, 1, 2, 0.95); }
+    .hidden { display: none !important; }
+    .kicker { letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); font-size: clamp(10px, 1.4vw, 14px); }
+    .title { font-size: clamp(16px, 3vw, 30px); max-width: 82vw; text-shadow: 0 0 14px rgba(255, 122, 38, 0.45); }
+    .cta { cursor: pointer; border: 1px solid var(--edge); background: rgba(255, 122, 38, 0.12); color: var(--text);
+      padding: 14px 28px; border-radius: 8px; font-size: clamp(14px, 2vw, 20px); letter-spacing: 0.12em; text-transform: uppercase; }
+    .cta:hover { background: rgba(255, 122, 38, 0.3); }
+    .dim { color: var(--muted); font-size: 13px; max-width: 70vw; }
+    @keyframes blink { 0%,45% { opacity: 1; } 46%,100% { opacity: .3; } }
+  
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .pill, .cta { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+  
+  </style>
+</head>
+<body>
+  <div class="curtain left"></div>
+  <div class="curtain right"></div>
+  <div class="valance"></div>
+
+  <div id="stage"><div id="screen"><div id="player"></div></div></div>
+
+  <div id="hud" class="hud hidden"><span class="dot"></span><span id="hudText"></span></div>
+
+  <div id="controls">
+    <button id="skipBtn" class="pill hidden" title="Cut straight to the next feature">Next ⏭</button>
+    <button id="restartBtn" class="pill hidden" title="Restart the programme">Restart ⟲</button>
+    <button id="fsBtn" class="pill" title="Real fullscreen (or press F)">Fullscreen ⛶</button>
+    <a class="pill" href="/" target="_top" title="Back to the station">☰ Station</a>
+  </div>
+
+  <div id="nextUp" class="hidden"></div>
+
+  <div id="leader" class="hidden">
+    <div class="grain"></div>
+    <div class="leadKick" id="leadKick">MAVO CINEMA PRESENTS</div>
+    <div class="ringwrap">
+      <div class="ring outer"></div>
+      <div class="ring inner"></div>
+      <div class="cross h"></div>
+      <div class="cross v"></div>
+      <div id="countNum">3</div>
+    </div>
+    <div id="leadTitle"></div>
+  </div>
+
+  <div id="startOverlay" class="overlay hidden">
+    <div class="kicker">The Cinema</div>
+    <div id="startTitle" class="title"></div>
+    <button id="startBtn" class="cta">▶ Lights down</button>
+    <div class="dim">
+      One click for sound - then the reels roll by themselves, with an old-school
+      film leader between features. At the end of the programme the projectionist
+      re-checks for new reels and starts the next one. Press F for real fullscreen.
+    </div>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * EDIT HERE
+     * Paste full YouTube links OR just the video IDs. One per line.
+     *****************************************************************/
+    // The list lives in playlists.js (same folder). EDIT THERE.
+    const videos = (window.MAVO_LONGS || []).slice();
+    // V2.0: every visit deals a fresh shuffled queue - never the same running order twice.
+    for (let i = videos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = videos[i]; videos[i] = videos[j]; videos[j] = t; }
+
+    // Film-leader countdown length between features (ms).
+    const leaderMillis = 3200;
+    // Intermission pause while re-checking for new links at the end (ms).
+    const intermissionMillis = 5000;
+    // Remember progress across reloads.
+    const rememberProgress = false; // V2.0: shuffled deck every visit, so there is nothing to resume
+
+    /*****************************************************************
+     * No need to edit below this line.
+     *****************************************************************/
+    const $ = (id) => document.getElementById(id);
+    const STORE_KEY = "yt_cinema_index_v1";
+
+    let currentIndex = 0, player = null, gotPlaying = false, ytReady = false;
+    let pendingStartIndex = null, leading = false;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) return url.pathname.split("/").filter(Boolean)[0] || raw;
+        const v = url.searchParams.get("v");
+        if (v) return v;
+        const m = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (m) return m[2];
+      } catch (err) {}
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+    videos.forEach((v) => { v.id = extractVideoId(v.url || v.id); });
+
+    function loadSavedIndex() {
+      if (!rememberProgress) return 0;
+      const s = parseInt(localStorage.getItem(STORE_KEY) || "0", 10);
+      return isNaN(s) ? 0 : Math.min(Math.max(s, 0), videos.length);
+    }
+    function saveIndex(n) { if (rememberProgress) localStorage.setItem(STORE_KEY, String(n)); }
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function tick(freq) {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        tick.ctx = tick.ctx || new Ctx();
+        const ctx = tick.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "square"; o.frequency.value = freq || 740;
+        g.gain.setValueAtTime(0.09, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + 0.06);
+      } catch (e) {}
+    }
+
+    function updateHud() {
+      show($("hud")); show($("skipBtn")); show($("restartBtn"));
+      $("hudText").textContent = "FEATURE " + (currentIndex + 1) + "/" + videos.length + " // " + videos[currentIndex].title;
+      const next = videos[currentIndex + 1] || videos[0];
+      $("nextUp").textContent = "NEXT FEATURE // " + next.title;
+      show($("nextUp"));
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%", height: "100%", videoId: videoId,
+        playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
+        events: { onReady: (e) => e.target.playVideo(), onStateChange: onPlayerState, onError: onPlayerError }
+      });
+    }
+
+    function startVideo(index) {
+      currentIndex = index; saveIndex(index);
+      hide($("startOverlay")); updateHud();
+      gotPlaying = false;
+      const video = videos[index];
+      if (player && typeof player.loadVideoById === "function") player.loadVideoById(video.id);
+      else if (ytReady) createPlayer(video.id);
+      else pendingStartIndex = index;
+      setTimeout(() => {
+        if (!gotPlaying) {
+          $("startTitle").textContent =
+            "The projector needs one click to keep rolling - feature " + (index + 1) + " of " + videos.length + ": " + videos[index].title;
+          show($("startOverlay"));
+        }
+      }, 6000);
+    }
+
+    // ---- Film leader between features ------------------------------------
+    function leaderTo(nextIndex, opts) {
+      if (leading) return;
+      leading = true;
+      const options = opts || {};
+      $("leadKick").textContent = options.kicker || "MAVO CINEMA PRESENTS";
+      $("leadTitle").textContent = options.title || videos[nextIndex].title;
+      hide($("nextUp"));
+      const lead = $("leader"), num = $("countNum");
+      let n = 3;
+      num.textContent = n;
+      lead.classList.add("on"); show(lead);
+      tick(740);
+      const iv = setInterval(() => {
+        n -= 1;
+        if (n >= 1) { num.textContent = n; tick(740); }
+      }, 1000);
+      setTimeout(() => {
+        clearInterval(iv);
+        if (options.reload) { saveIndex(videos.length); location.reload(); return; }
+        startVideo(nextIndex);
+        leaderToOff(lead);
+      }, leaderMillis);
+    }
+    function leaderToOff(leadEl) {
+      leadEl.classList.remove("on");
+      setTimeout(() => { hide(leadEl); leading = false; }, 500);
+    }
+
+    function shortFinished() {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < videos.length) { saveIndex(nextIndex); leaderTo(nextIndex); }
+      else endOfProgramme();
+    }
+    function goToNextNow() {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < videos.length) { saveIndex(nextIndex); leaderTo(nextIndex, { kicker: "CUT! ⏭" }); }
+      else endOfProgramme();
+    }
+    function endOfProgramme() {
+      hide($("nextUp"));
+      saveIndex(videos.length);
+      const lead = $("leader");
+      $("leadKick").textContent = "INTERMISSION";
+      $("countNum").textContent = "✦";
+      $("leadTitle").textContent = "Re-checking the reels for new videos - next programme starts shortly…";
+      lead.classList.add("on"); show(lead);
+      tick(392);
+      setTimeout(() => location.reload(), intermissionMillis);
+    }
+
+    function onPlayerState(e) {
+      if (e.data === YT.PlayerState.PLAYING) { gotPlaying = true; hide($("startOverlay")); }
+      if (e.data === YT.PlayerState.ENDED) shortFinished();
+    }
+    function onPlayerError(e) {
+      gotPlaying = true;
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < videos.length) leaderTo(nextIndex, { kicker: "REEL DAMAGED (ERROR " + e.data + ") - MOVING ON…" });
+      else endOfProgramme();
+    }
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    $("startBtn").addEventListener("click", () => { hide($("startOverlay")); startVideo(Math.min(loadSavedIndex(), videos.length - 1)); });
+    $("skipBtn").addEventListener("click", goToNextNow);
+    $("restartBtn").addEventListener("click", () => { saveIndex(0); leaderTo(0, { kicker: "FROM THE TOP ⟲" }); });
+    $("fsBtn").addEventListener("click", toggleFullscreen);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "f" || e.key === "F") toggleFullscreen();
+      if (e.key === " " || e.key === "ArrowRight") goToNextNow();
+    });
+
+    window.onYouTubeIframeAPIReady = function () {
+      ytReady = true;
+      if (pendingStartIndex !== null) { const i = pendingStartIndex; pendingStartIndex = null; startVideo(i); }
+    };
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    (function boot() {
+      if (videos.length === 0) {
+        $("startTitle").textContent = "The bill is empty - add some video links in playlists.js.";
+        $("startBtn").style.display = "none";
+        show($("startOverlay"));
+        return;
+      }
+      const saved = loadSavedIndex();
+      if (saved >= videos.length) { saveIndex(0); startVideo(0); }
+      else if (saved > 0) { startVideo(saved); }
+      else {
+        $("startTitle").textContent = videos.length + " features on tonight's bill - the projector never sleeps.";
+        show($("startOverlay"));
+      }
+    })();
+  </script>
+  <script>
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText =
+        "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;" +
+        "max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;" +
+        "background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;" +
+        "font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML =
+        "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>" +
+        "Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" + page + "</b> - or visit <b>mavomusic.co.uk</b>.";
+      document.body.appendChild(warn);
+    }
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prime Time - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #04060a;
+      --line: rgba(127, 178, 255, 0.55);
+      --line-dim: rgba(127, 178, 255, 0.22);
+      --text: #e2efff;
+      --muted: rgba(226, 239, 255, 0.72);
+      --accent: #7fb2ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 4px); mix-blend-mode: screen; opacity: 0.5; }
+    #playerWrap { position: fixed; inset: 0; background: radial-gradient(circle at center, rgba(40, 80, 160, 0.16), transparent 45%), #020304; }
+    #playerWrap iframe, #player { width: 100%; height: 100%; border: 0; display: block; }
+
+    /* Test card shown while off air */
+    #offAir { position: fixed; inset: 0; z-index: 28; display: flex; flex-direction: column; }
+    #bars { flex: 1; display: flex; }
+    #bars i { flex: 1; }
+    #offAirBottom { height: 22vh; background: #050505; border-top: 3px solid #111; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 10px; }
+    #offAirKicker { letter-spacing: 0.4em; text-transform: uppercase; color: var(--accent); font-size: clamp(11px, 1.6vw, 16px); text-shadow: 0 0 14px rgba(127,178,255,0.6); }
+    #offAirClock { font-family: Consolas, Monaco, monospace; font-size: clamp(30px, 6vw, 64px); font-weight: 800; }
+    #offAirNext { color: var(--muted); font-size: clamp(11px, 1.5vw, 15px); }
+
+    .hud { position: fixed; left: 10px; top: 10px; z-index: 25; display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 360px); padding: 6px 10px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.72); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 10px #ff4d4d; animation: blink 1.2s infinite; }
+    .onair { color: #ff4d4d; font-weight: 700; letter-spacing: 0.2em; }
+    #controls { position: fixed; right: 10px; top: 10px; z-index: 29; display: flex; gap: 8px; }
+    .pill { cursor: pointer; padding: 6px 10px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.72); color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; }
+    .pill:hover { color: var(--text); border-color: var(--line); }
+    #nextUp { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20; max-width: 90vw; padding: 7px 11px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.74); color: var(--muted); font-size: 12px; letter-spacing: 0.05em; text-align: center; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; background: radial-gradient(circle at center, rgba(40,80,160,0.2), transparent 55%), rgba(2,3,4,0.94); }
+    .hidden { display: none !important; }
+    .kicker { letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); font-size: clamp(10px, 1.4vw, 14px); }
+    .title { font-size: clamp(16px, 3vw, 30px); max-width: 82vw; text-shadow: 0 0 14px rgba(127,178,255,0.45); }
+    .big { font-size: clamp(64px, 18vw, 220px); font-weight: 800; line-height: 1; color: var(--accent); text-shadow: 0 0 30px rgba(127,178,255,0.65); font-family: Consolas, Monaco, monospace; }
+    .cta { cursor: pointer; border: 1px solid var(--line); background: rgba(127,178,255,0.12); color: var(--text); padding: 14px 28px; border-radius: 8px; font-size: clamp(14px,2vw,20px); letter-spacing: 0.12em; text-transform: uppercase; }
+    .cta:hover { background: rgba(127,178,255,0.3); }
+    .dim { color: var(--muted); font-size: 13px; max-width: 70vw; }
+    @keyframes blink { 0%,45% { opacity: 1; } 46%,100% { opacity: 0.3; } }
+  
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .pill, .cta { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+  
+  </style>
+</head>
+<body>
+  <div id="playerWrap"><div id="player"></div></div>
+
+  <div id="offAir" class="hidden">
+    <div id="bars">
+      <i style="background:#c8c8c8"></i><i style="background:#c8c800"></i><i style="background:#00c8c8"></i><i style="background:#00c800"></i><i style="background:#c800c8"></i><i style="background:#c80000"></i><i style="background:#0000c8"></i>
+    </div>
+    <div id="offAirBottom">
+      <div id="offAirKicker">Off air</div>
+      <div id="offAirClock">--:--:--</div>
+      <div id="offAirNext">Back on air soon</div>
+    </div>
+  </div>
+
+  <div id="hud" class="hud hidden"><span class="dot"></span><span class="onair">ON AIR</span><span id="hudText"></span></div>
+
+  <div id="controls">
+    <button id="skipBtn" class="pill hidden" title="Next video now">Next ⏭</button>
+    <button id="fsBtn" class="pill" title="Real fullscreen (or press F)">Fullscreen ⛶</button>
+    <a class="pill" href="/" target="_top" title="Back to the launcher">☰ Station</a>
+  </div>
+
+  <div id="nextUp" class="hidden"></div>
+
+  <div id="startOverlay" class="overlay hidden">
+    <div class="kicker">YouTube Prime Time</div>
+    <div id="startTitle" class="title"></div>
+    <button id="startBtn" class="cta">🗼 Tune in</button>
+    <div class="dim">One click for sound. The station broadcasts your list on loop during prime-time hours only, then switches to the test card until tomorrow. Press F for real fullscreen.</div>
+  </div>
+
+  <div id="countdownOverlay" class="overlay hidden">
+    <div id="cdKicker" class="kicker">Coming up next</div>
+    <div id="cdTitle" class="title"></div>
+    <div id="cdNumber" class="big">5</div>
+    <div class="dim">Click anywhere to skip the wait</div>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * EDIT HERE - full links or just IDs, as many as you like.
+     *****************************************************************/
+    // The list lives in playlists.js (same folder). EDIT THERE.
+    const videos = (window.MAVO_LONGS || []).slice();
+    // V2.0: every visit deals a fresh shuffled queue - never the same running order twice.
+    for (let i = videos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = videos[i]; videos[i] = videos[j]; videos[j] = t; }
+
+    // Broadcast window (local time, 24h). Overnight works too (e.g. 22 → 6).
+    const broadcastStartHour = 18;  // 6pm
+    const broadcastEndHour = 23;    // 11pm
+
+    // Between videos while on air.
+    const secondsBetweenVideos = 5;
+
+    /*****************************************************************/
+    const $ = (id) => document.getElementById(id);
+    const STORE_KEY = "yt_primetime_index_v1";
+
+    let currentIndex = 0; // V2.0: shuffled deck always starts at the top
+    let player = null, countdownTimer = null, gotPlaying = false, ytReady = false;
+    let onAirNow = false, playing = false;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) return url.pathname.split("/").filter(Boolean)[0] || raw;
+        const vParam = url.searchParams.get("v");
+        if (vParam) return vParam;
+        const match = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (match) return match[2];
+      } catch (err) {}
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+    videos.forEach((v) => { v.id = extractVideoId(v.url || v.id); });
+    currentIndex = Math.min(currentIndex, Math.max(videos.length - 1, 0));
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+    function clearCountdown() { if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; } }
+
+    function inWindow(date) {
+      const h = date.getHours();
+      if (broadcastStartHour <= broadcastEndHour) return h >= broadcastStartHour && h < broadcastEndHour;
+      return h >= broadcastStartHour || h < broadcastEndHour; // overnight window
+    }
+
+    function msUntilWindowStart(now) {
+      const d = new Date(now);
+      d.setHours(broadcastStartHour, 0, 0, 0);
+      if (d <= now) d.setDate(d.getDate() + 1);
+      return d - now;
+    }
+
+    function updateHud() {
+      show($("hud")); show($("skipBtn"));
+      $("hudText").textContent = `VIDEO ${currentIndex + 1}/${videos.length} // ${videos[currentIndex].title}`;
+      const next = videos[(currentIndex + 1) % videos.length];
+      if (next) { $("nextUp").textContent = `NEXT UP // ${next.title}`; show($("nextUp")); }
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%", height: "100%", videoId: videoId,
+        playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
+        events: { onReady: (e) => e.target.playVideo(), onStateChange: onState, onError: onErr }
+      });
+    }
+
+    function startVideo(index) {
+      currentIndex = index;
+      localStorage.setItem(STORE_KEY, String(index));
+      playing = true;
+      clearCountdown();
+      hide($("startOverlay")); hide($("countdownOverlay"));
+      updateHud();
+      gotPlaying = false;
+      const video = videos[index];
+      if (player && typeof player.loadVideoById === "function") player.loadVideoById(video.id);
+      else createPlayer(video.id);
+      setTimeout(() => {
+        if (!gotPlaying) {
+          $("startTitle").textContent = `WE ARE ON AIR - click below to tune in: ${videos[index].title}`;
+          show($("startOverlay"));
+        }
+      }, 6000);
+    }
+
+    function onState(e) {
+      if (e.data === YT.PlayerState.PLAYING) { gotPlaying = true; hide($("startOverlay")); }
+      if (e.data === YT.PlayerState.ENDED) videoFinished();
+    }
+    function onErr() { gotPlaying = true; videoFinished(); }
+
+    function videoFinished() {
+      if (!onAirNow) return;
+      const nextIndex = (currentIndex + 1) % videos.length;
+      hide($("nextUp"));
+      $("cdKicker").textContent = `Video ${currentIndex + 1} of ${videos.length} finished - next in`;
+      $("cdTitle").textContent = videos[nextIndex].title;
+      show($("countdownOverlay"));
+      let left = secondsBetweenVideos;
+      $("cdNumber").textContent = left;
+      countdownTimer = setInterval(() => {
+        left--;
+        $("cdNumber").textContent = Math.max(left, 0);
+        if (left <= 0) { clearCountdown(); if (onAirNow) startVideo(nextIndex); }
+      }, 1000);
+    }
+
+    // --- On/off air switching ---------------------------------------
+
+    function goOnAir() {
+      onAirNow = true;
+      hide($("offAir"));
+      startVideo(currentIndex);
+    }
+
+    function goOffAir() {
+      onAirNow = false;
+      playing = false;
+      clearCountdown();
+      localStorage.setItem(STORE_KEY, String(currentIndex));
+      if (player && typeof player.stopVideo === "function") { try { player.stopVideo(); } catch (e) {} }
+      hide($("countdownOverlay")); hide($("startOverlay"));
+      hide($("hud")); hide($("nextUp")); hide($("skipBtn"));
+      show($("offAir"));
+    }
+
+    function tickClock() {
+      const now = new Date();
+      $("offAirClock").textContent =
+        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const wasOnAir = onAirNow;
+      const shouldBeOnAir = videos.length > 0 && inWindow(now);
+
+      if (!shouldBeOnAir) {
+        const ms = msUntilWindowStart(now);
+        const totalSec = Math.floor(ms / 1000);
+        const hh = Math.floor(totalSec / 3600);
+        const mm = Math.floor((totalSec % 3600) / 60);
+        const ss = totalSec % 60;
+        $("offAirNext").textContent =
+          `Back on air at ${pad(broadcastStartHour)}:00 - in ${hh}h ${pad(mm)}m ${pad(ss)}s`;
+      }
+
+      if (shouldBeOnAir && !wasOnAir) goOnAir();
+      else if (!shouldBeOnAir && (wasOnAir || playing)) goOffAir();
+    }
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    $("startBtn").addEventListener("click", () => { hide($("startOverlay")); if (onAirNow) startVideo(currentIndex); });
+    $("countdownOverlay").addEventListener("click", () => { clearCountdown(); if (onAirNow) videoFinishedNow(); });
+    function videoFinishedNow() { startVideo((currentIndex + 1) % videos.length); }
+    $("skipBtn").addEventListener("click", videoFinished);
+    $("fsBtn").addEventListener("click", toggleFullscreen);
+    document.addEventListener("keydown", (e) => { if (e.key === "f" || e.key === "F") toggleFullscreen(); });
+
+    window.onYouTubeIframeAPIReady = function () { ytReady = true; };
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    (function boot() {
+      if (videos.length === 0) {
+        $("startTitle").textContent = "No programs scheduled - add some YouTube links in playlists.js.";
+        $("startBtn").style.display = "none";
+        show($("startOverlay"));
+        return;
+      }
+      tickClock();
+      setInterval(tickClock, 1000);
+
+      if (inWindow(new Date())) {
+        $("startTitle").textContent = `ON AIR NOW until ${pad(broadcastEndHour)}:00 - ${videos.length} programs scheduled.`;
+        show($("startOverlay"));
+      } else {
+        show($("offAir"));
+      }
+    })();
+  </script>
+  <script>
+    // YouTube blocks embeds that have no web origin (opened as a file) - "Error 153".
+    // Serve this page over http://localhost instead - run Localhost.ps1 in this folder.
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText = "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML = "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" + page + "</b> instead.";
+      document.body.appendChild(warn);
+    }
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+</body>
+</html>

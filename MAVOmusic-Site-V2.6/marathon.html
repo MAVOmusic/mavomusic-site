@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Marathon - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #070507;
+      --line: rgba(255, 45, 70, 0.55);
+      --line-dim: rgba(255, 45, 70, 0.22);
+      --text: #ffe3e7;
+      --muted: rgba(255, 227, 231, 0.72);
+      --accent: #ff2d46;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.022) 0,
+          rgba(255,255,255,0.022) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.5;
+    }
+
+    #playerWrap {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at center, rgba(145, 24, 40, 0.14), transparent 45%),
+        #030303;
+    }
+
+    #playerWrap iframe, #player {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    .hud {
+      position: fixed;
+      left: 10px;
+      top: 10px;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: calc(100vw - 330px);
+      padding: 6px 10px;
+      border: 1px solid var(--line-dim);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.72);
+      color: var(--text);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: blink 1.2s infinite;
+    }
+
+    #controls {
+      position: fixed;
+      right: 10px;
+      top: 10px;
+      z-index: 25;
+      display: flex;
+      gap: 8px;
+    }
+
+    .pill {
+      cursor: pointer;
+      padding: 6px 10px;
+      border: 1px solid var(--line-dim);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.72);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+
+    .pill:hover { color: var(--text); border-color: var(--line); }
+
+    #nextUp {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      z-index: 20;
+      max-width: 90vw;
+      padding: 7px 11px;
+      border: 1px solid var(--line-dim);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.74);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-align: center;
+      pointer-events: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at center, rgba(145, 24, 40, 0.18), transparent 55%),
+        rgba(3, 3, 4, 0.94);
+    }
+
+    .hidden { display: none !important; }
+
+    .kicker {
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-size: clamp(10px, 1.4vw, 14px);
+    }
+
+    .title {
+      font-size: clamp(16px, 3vw, 30px);
+      max-width: 82vw;
+      text-shadow: 0 0 14px rgba(255, 45, 70, 0.45);
+    }
+
+    .big {
+      font-size: clamp(64px, 18vw, 220px);
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent);
+      text-shadow: 0 0 30px rgba(255, 45, 70, 0.65);
+      font-family: Consolas, Monaco, monospace;
+    }
+
+    .cta {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: rgba(255, 45, 70, 0.12);
+      color: var(--text);
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: clamp(14px, 2vw, 20px);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .cta:hover { background: rgba(255, 45, 70, 0.3); }
+
+    .dim { color: var(--muted); font-size: 13px; max-width: 70vw; }
+
+    @keyframes blink {
+      0%, 45% { opacity: 1; }
+      46%, 100% { opacity: 0.3; }
+    }
+  
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .pill, .cta { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+  
+  </style>
+</head>
+<body>
+  <div id="playerWrap"><div id="player"></div></div>
+
+  <div id="hud" class="hud hidden">
+    <span class="dot"></span>
+    <span id="hudText"></span>
+  </div>
+
+  <div id="controls">
+    <button id="skipBtn" class="pill hidden" title="Skip to the next video">Skip ⏭</button>
+    <button id="restartBtn" class="pill hidden" title="Start again from video 1">Restart ⟲</button>
+    <button id="fsBtn" class="pill" title="Real fullscreen (or press F)">Fullscreen ⛶</button>
+    <a class="pill" href="/" target="_top" title="Back to the launcher">☰ Station</a>
+  </div>
+
+  <div id="nextUp" class="hidden"></div>
+
+  <div id="startOverlay" class="overlay hidden">
+    <div class="kicker">YouTube Container Player</div>
+    <div id="startTitle" class="title"></div>
+    <button id="startBtn" class="cta">▶ Start watching</button>
+    <div class="dim">
+      Browsers only allow sound after one click. After this you can walk away -
+      every video in the list plays by itself, with a countdown in between.
+      Press F for real fullscreen.
+    </div>
+  </div>
+
+  <div id="countdownOverlay" class="overlay hidden">
+    <div id="cdKicker" class="kicker">Video finished</div>
+    <div id="cdTitle" class="title"></div>
+    <div id="cdNumber" class="big">10</div>
+    <div class="dim">The next video starts automatically - click anywhere to skip the wait</div>
+  </div>
+
+  <div id="lapOverlay" class="overlay hidden">
+    <div class="kicker">List complete</div>
+    <div class="title">RE-CHECKING FOR NEW VIDEOS…</div>
+    <div id="lapNumber" class="big">5</div>
+    <div class="dim">
+      If you added new links and saved the file, they play next -
+      otherwise the whole list starts again. Click to go now.
+    </div>
+  </div>
+
+  <div id="waitingOverlay" class="overlay hidden">
+    <div class="kicker">All videos finished</div>
+    <div class="title">WAITING FOR THE NEXT VIDEO…</div>
+    <div class="dim">
+      Add more links to the list in playlists.js and save it.
+      This page re-checks by itself every <span id="recheckInfo">60</span> seconds
+      and carries on where it stopped.
+    </div>
+    <button id="replayBtn" class="cta">⟲ Replay everything</button>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * EDIT HERE
+     * Paste a full YouTube link OR just the video ID. Add as many
+     * lines as you like - the player works through them top to bottom.
+     *****************************************************************/
+    // The list lives in playlists.js (same folder). EDIT THERE.
+    const videos = (window.MAVO_LONGS || []).slice();
+    // V2.0: every visit deals a fresh shuffled queue - never the same running order twice.
+    for (let i = videos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = videos[i]; videos[i] = videos[j]; videos[j] = t; }
+
+    // Countdown shown between the end of one video and the start of the next.
+    const secondsBetweenVideos = 10;
+
+    // TRUE = when the last video ends, the page reloads (picking up any
+    // newly added links) and restarts by itself - no asking, no waiting.
+    // FALSE = show the old "waiting for the next video…" screen instead.
+    const autoRestart = true;
+
+    // Seconds on the re-checking screen before the reload happens.
+    const lapRecheckSeconds = 5;
+
+    // Only used when autoRestart is false: while waiting, reload this often.
+    const recheckSeconds = 60;
+
+    // Remember progress, so reopening/reloading the tab continues where it stopped.
+    const rememberProgress = false; // V2.0: shuffled deck every visit, so there is nothing to resume
+
+    /*****************************************************************
+     * No need to edit below this line unless you want to customise it.
+     *****************************************************************/
+    const $ = (id) => document.getElementById(id);
+    const STORE_KEY = "yt_container_fullscreen_index_v1";
+
+    let currentIndex = 0;
+    let player = null;
+    let countdownTimer = null;
+    let lapTimer = null;
+    let gotPlaying = false;
+    let ytReady = false;
+    let pendingStartIndex = null;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) {
+          return url.pathname.split("/").filter(Boolean)[0] || raw;
+        }
+        const vParam = url.searchParams.get("v");
+        if (vParam) return vParam;
+        const match = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (match) return match[2];
+      } catch (err) { /* not a URL */ }
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+
+    videos.forEach((video) => { video.id = extractVideoId(video.url || video.id); });
+
+    function loadSavedIndex() {
+      if (!rememberProgress) return 0;
+      const saved = parseInt(localStorage.getItem(STORE_KEY) || "0", 10);
+      if (isNaN(saved)) return 0;
+      return Math.min(Math.max(saved, 0), videos.length);
+    }
+
+    function saveIndex(n) {
+      if (rememberProgress) localStorage.setItem(STORE_KEY, String(n));
+    }
+
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function hideAllOverlays() {
+      hide($("startOverlay"));
+      hide($("countdownOverlay"));
+      hide($("lapOverlay"));
+      hide($("waitingOverlay"));
+    }
+
+    function updateHud() {
+      show($("hud"));
+      show($("skipBtn"));
+      show($("restartBtn"));
+      $("hudText").textContent =
+        `VIDEO ${currentIndex + 1}/${videos.length} // ${videos[currentIndex].title}`;
+
+      const next = videos[currentIndex + 1] || (autoRestart ? videos[0] : null);
+      if (next) {
+        $("nextUp").textContent = `NEXT UP // ${next.title}`;
+        show($("nextUp"));
+      } else {
+        hide($("nextUp"));
+      }
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%",
+        height: "100%",
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          rel: 0,
+          playsinline: 1,
+          modestbranding: 1,
+          iv_load_policy: 3
+        },
+        events: {
+          onReady: (event) => event.target.playVideo(),
+          onStateChange: onPlayerState,
+          onError: onPlayerError
+        }
+      });
+    }
+
+    function startVideo(index) {
+      currentIndex = index;
+      saveIndex(index);
+      clearTimers();
+      hideAllOverlays();
+      updateHud();
+      gotPlaying = false;
+
+      const video = videos[index];
+      if (player && typeof player.loadVideoById === "function") {
+        player.loadVideoById(video.id);
+      } else if (ytReady) {
+        createPlayer(video.id);
+      } else {
+        pendingStartIndex = index;
+      }
+
+      // If autoplay with sound got blocked, nothing ever reports PLAYING,
+      // so bring back the click-to-start overlay as a fallback.
+      setTimeout(() => {
+        if (!gotPlaying) {
+          $("startTitle").textContent =
+            `Your browser paused autoplay. Click below to continue with video ${index + 1} of ${videos.length}: ${videos[index].title}`;
+          show($("startOverlay"));
+        }
+      }, 6000);
+    }
+
+    function onPlayerState(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        gotPlaying = true;
+        hide($("startOverlay"));
+      }
+      if (event.data === YT.PlayerState.ENDED) {
+        videoFinished();
+      }
+    }
+
+    function onPlayerError(event) {
+      gotPlaying = true; // suppress the autoplay-blocked fallback
+      $("cdKicker").textContent =
+        `Video ${currentIndex + 1} could not be played (YouTube error ${event.data}) - skipping…`;
+      $("cdTitle").textContent = videos[currentIndex].title;
+      $("cdNumber").textContent = "✕";
+      show($("countdownOverlay"));
+      setTimeout(videoFinished, 4000);
+    }
+
+    function goToNext() {
+      clearTimers();
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < videos.length) {
+        saveIndex(nextIndex);
+        startVideo(nextIndex);
+      } else {
+        endOfList();
+      }
+    }
+
+    function videoFinished() {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < videos.length) {
+        saveIndex(nextIndex);
+        showCountdown(nextIndex);
+      } else {
+        endOfList();
+      }
+    }
+
+    function endOfList() {
+      saveIndex(videos.length);
+      if (autoRestart) {
+        showLapRecheck();
+      } else {
+        enterWaiting();
+      }
+    }
+
+    function showCountdown(nextIndex) {
+      hide($("nextUp"));
+      $("cdKicker").textContent =
+        `Video ${currentIndex + 1} of ${videos.length} finished - playing next in`;
+      $("cdTitle").textContent = videos[nextIndex].title;
+      show($("countdownOverlay"));
+
+      let left = secondsBetweenVideos;
+      $("cdNumber").textContent = left;
+
+      countdownTimer = setInterval(() => {
+        left--;
+        $("cdNumber").textContent = Math.max(left, 0);
+        if (left <= 0) {
+          clearTimers();
+          startVideo(nextIndex);
+        }
+      }, 1000);
+    }
+
+    function showLapRecheck() {
+      hideAllOverlays();
+      hide($("nextUp"));
+      show($("lapOverlay"));
+
+      let left = lapRecheckSeconds;
+      $("lapNumber").textContent = left;
+
+      lapTimer = setInterval(() => {
+        left--;
+        $("lapNumber").textContent = Math.max(left, 0);
+        if (left <= 0) {
+          clearTimers();
+          location.reload();
+        }
+      }, 1000);
+    }
+
+    function clearTimers() {
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      if (lapTimer) { clearInterval(lapTimer); lapTimer = null; }
+    }
+
+    function enterWaiting() {
+      clearTimers();
+      hideAllOverlays();
+      hide($("hud"));
+      hide($("nextUp"));
+      hide($("skipBtn"));
+      hide($("restartBtn"));
+      $("recheckInfo").textContent = recheckSeconds;
+      show($("waitingOverlay"));
+      setTimeout(() => location.reload(), recheckSeconds * 1000);
+    }
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+
+    // --- Wiring -------------------------------------------------------
+
+    $("startBtn").addEventListener("click", () => {
+      hide($("startOverlay"));
+      startVideo(Math.min(loadSavedIndex(), videos.length - 1));
+    });
+
+    $("countdownOverlay").addEventListener("click", goToNext);
+    $("lapOverlay").addEventListener("click", () => { clearTimers(); location.reload(); });
+
+    $("skipBtn").addEventListener("click", goToNext);
+
+    $("restartBtn").addEventListener("click", () => {
+      saveIndex(0);
+      startVideo(0);
+    });
+
+    $("replayBtn").addEventListener("click", () => {
+      saveIndex(0);
+      location.reload();
+    });
+
+    $("fsBtn").addEventListener("click", toggleFullscreen);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "f" || event.key === "F") toggleFullscreen();
+    });
+
+    // --- Boot ----------------------------------------------------------
+
+    window.onYouTubeIframeAPIReady = function () {
+      ytReady = true;
+      if (pendingStartIndex !== null) {
+        const index = pendingStartIndex;
+        pendingStartIndex = null;
+        startVideo(index);
+      }
+    };
+
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    (function boot() {
+      $("recheckInfo").textContent = recheckSeconds;
+
+      if (videos.length === 0) {
+        $("startTitle").textContent =
+          "The list is empty - add some YouTube links in playlists.js.";
+        $("startBtn").style.display = "none";
+        show($("startOverlay"));
+        return;
+      }
+
+      const saved = loadSavedIndex();
+
+      if (saved >= videos.length) {
+        // Lap finished on a previous run (or the page re-checked).
+        saveIndex(0);
+        if (autoRestart) {
+          // Try to roll straight into the next lap; the fallback overlay
+          // appears if the browser blocks autoplay with sound.
+          startVideo(0);
+        } else {
+          $("startTitle").textContent =
+            `All ${videos.length} videos in the container were already watched.`;
+          $("startBtn").textContent = "⟲ Start again from video 1";
+          show($("startOverlay"));
+        }
+      } else if (saved > 0) {
+        // Mid-list (or new links appeared after a re-check): carry on.
+        startVideo(saved);
+      } else {
+        $("startTitle").textContent =
+          `${videos.length} videos loaded - ready to play "${videos[0].title}" first.`;
+        show($("startOverlay"));
+      }
+    })();
+  </script>
+  <script>
+    // YouTube blocks embeds that have no web origin (opened as a file),
+    // which is exactly what "Error 153" means. Serve this page over
+    // http://localhost instead - run Localhost.ps1 in this folder.
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText =
+        "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;" +
+        "max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;" +
+        "background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;" +
+        "font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML =
+        "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>" +
+        "Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" +
+        page + "</b> instead.";
+      document.body.appendChild(warn);
+    }
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+</body>
+</html>
