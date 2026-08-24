@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shorts Jukebox - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #070508;
+      --line: rgba(180, 123, 255, 0.55);
+      --line-dim: rgba(180, 123, 255, 0.22);
+      --text: #f3e9ff;
+      --muted: rgba(243, 233, 255, 0.72);
+      --accent: #b47bff;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 4px); mix-blend-mode: screen; opacity: 0.5; }
+    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at center, rgba(96, 40, 160, 0.18), transparent 50%), #030203; }
+    #phone { position: relative; width: min(100vw, calc(100vh * 9 / 16)); aspect-ratio: 9 / 16; overflow: hidden; background: #000; border: 1px solid var(--line-dim); border-radius: clamp(0px, 2.2vh, 24px); box-shadow: 0 0 45px rgba(180, 123, 255, 0.16), 0 0 140px rgba(180, 123, 255, 0.07); }
+    #player, #phone iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+    .hud { position: fixed; left: 10px; top: 10px; z-index: 25; display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 360px); padding: 6px 10px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.72); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: blink 1.2s infinite; }
+    #controls { position: fixed; right: 10px; top: 10px; z-index: 25; display: flex; gap: 8px; }
+    .pill { cursor: pointer; padding: 6px 10px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.72); color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; }
+    .pill:hover { color: var(--text); border-color: var(--line); }
+    #nextUp { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20; max-width: 90vw; padding: 7px 11px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.74); color: var(--muted); font-size: 12px; letter-spacing: 0.05em; text-align: center; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; background: radial-gradient(circle at center, rgba(96,40,160,0.22), transparent 55%), rgba(3,2,3,0.94); }
+    .hidden { display: none !important; }
+    .kicker { letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); font-size: clamp(10px, 1.4vw, 14px); }
+    .title { font-size: clamp(16px, 3vw, 30px); max-width: 82vw; text-shadow: 0 0 14px rgba(180,123,255,0.45); }
+    .cta { cursor: pointer; border: 1px solid var(--line); background: rgba(180,123,255,0.12); color: var(--text); padding: 14px 28px; border-radius: 8px; font-size: clamp(14px,2vw,20px); letter-spacing: 0.12em; text-transform: uppercase; }
+    .cta:hover { background: rgba(180,123,255,0.3); }
+    .dim { color: var(--muted); font-size: 13px; max-width: 70vw; }
+    #reqGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; width: min(92vw, 940px); max-height: 52vh; overflow-y: auto; }
+    .reqCard { display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer; padding: 10px 12px; border: 1px solid var(--line-dim); border-radius: 10px; background: rgba(255,255,255,0.03); }
+    .reqCard:hover { border-color: var(--line); background: rgba(180,123,255,0.1); }
+    .reqKey { flex: 0 0 auto; font-family: Consolas, Monaco, monospace; font-weight: 800; color: var(--accent); border: 1px solid var(--line-dim); border-radius: 6px; padding: 3px 9px; font-size: 14px; }
+    .reqTitle { font-size: 12.5px; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    @keyframes blink { 0%,45% { opacity: 1; } 46%,100% { opacity: 0.3; } }
+  
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .pill, .cta { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+  
+  
+    .mavo-embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+    #phone, #screen, #miniPlayer { position: relative; z-index: 2; }
+
+  
+  </style>
+</head>
+<body>
+  <div id="stage"><div id="phone"><div id="player"></div></div></div>
+
+  <div id="hud" class="hud hidden"><span class="dot"></span><span id="hudText"></span></div>
+
+  <div id="controls">
+    <button id="skipBtn" class="pill hidden" title="Next short / open requests">Requests 🎵</button>
+    <button id="fsBtn" class="pill" title="Real fullscreen (or press F)">Fullscreen ⛶</button>
+    <a class="pill" href="/" target="_top" title="Back to the launcher">☰ Station</a>
+  </div>
+
+  <div id="nextUp" class="hidden"></div>
+
+  <div id="startOverlay" class="overlay hidden">
+    <div class="kicker">Shorts Jukebox</div>
+    <div id="startTitle" class="title"></div>
+    <button id="startBtn" class="cta">🎵 Drop the coin</button>
+    <div class="dim">Nothing plays by itself in here: drop the coin, pick a short, and it starts with YOUR click - hand-started plays are the ones that count as views. Keys 1-9 work too; F for real fullscreen.</div>
+  </div>
+
+  <div id="requestOverlay" class="overlay hidden">
+    <div class="kicker" id="reqKicker">Make your request</div>
+    <div id="reqGrid"></div>
+    <div class="dim">Press 1-9 or click a card - the jukebox waits for YOUR pick. Views count because you start them. 🎵</div>
+  </div>
+
+  <div id="errorOverlay" class="overlay hidden">
+    <div class="kicker" id="errKicker">Short unavailable</div>
+    <div class="dim">Skipping in a moment…</div>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * EDIT HERE - full Shorts links or just IDs. First 9 get number keys.
+     *****************************************************************/
+    // The list lives in playlists.js (same folder). EDIT THERE.
+    const shorts = (window.MAVO_SHORTS || []).slice();
+    // V2.0: every visit deals a fresh shuffled queue - never the same running order twice.
+    for (let i = shorts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = shorts[i]; shorts[i] = shorts[j]; shorts[j] = t; }
+
+    // No auto-advance anymore: after each short the jukebox waits for a human pick (hand-started plays count).
+
+    /*****************************************************************/
+    const $ = (id) => document.getElementById(id);
+    let currentIndex = 0, player = null, gotPlaying = false, ytReady = false;
+    let pendingStartIndex = null, bootDone = false;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) return url.pathname.split("/").filter(Boolean)[0] || raw;
+        const vParam = url.searchParams.get("v");
+        if (vParam) return vParam;
+        const match = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (match) return match[2];
+      } catch (err) {}
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+    shorts.forEach((v) => { v.id = extractVideoId(v.url || v.id); });
+
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+    function hideAllOverlays() { hide($("startOverlay")); hide($("requestOverlay")); hide($("errorOverlay")); }
+    function clearRequestTimer() {}
+
+    function updateHud() {
+      show($("hud")); show($("skipBtn"));
+      $("hudText").textContent = `JUKEBOX · ${currentIndex + 1}/${shorts.length} // ${shorts[currentIndex].title}`;
+      updateNextUp();
+    }
+
+    function updateNextUp() {
+      $("nextUp").textContent = "NEXT UP // whatever you pick - 1-9 or a click after each short";
+      show($("nextUp"));
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%", height: "100%", videoId: videoId,
+        playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
+        events: { onReady: (e) => e.target.playVideo(), onStateChange: onState, onError: onErr }
+      });
+    }
+
+    function startVideo(index) {
+      currentIndex = index;
+      clearRequestTimer();
+      hideAllOverlays();
+      updateHud();
+      gotPlaying = false;
+      const video = shorts[index];
+      if (player && typeof player.loadVideoById === "function") player.loadVideoById(video.id);
+      else if (ytReady) createPlayer(video.id);
+      else pendingStartIndex = index;
+      setTimeout(() => {
+        if (!gotPlaying) {
+          $("startTitle").textContent = `Your browser paused autoplay. Click below to continue: ${shorts[index].title}`;
+          show($("startOverlay"));
+        }
+      }, 6000);
+    }
+
+    function onState(e) {
+      if (e.data === YT.PlayerState.PLAYING) { gotPlaying = true; hide($("startOverlay")); }
+      if (e.data === YT.PlayerState.ENDED) songFinished();
+    }
+
+    function onErr(e) {
+      gotPlaying = true;
+      $("errKicker").textContent = `Can't play that one (YouTube error ${e.data})`;
+      show($("errorOverlay"));
+      setTimeout(songFinished, 3000);
+    }
+
+    function songFinished() {
+      openRequestWindow();
+    }
+
+    function openRequestWindow() {
+      hide($("nextUp"));
+      buildRequestCards();
+      show($("requestOverlay"));
+    }
+
+    function buildRequestCards() {
+      $("reqKicker").textContent = "Make your request - the jukebox only plays on YOUR click";
+      const grid = $("reqGrid");
+      grid.innerHTML = "";
+      shorts.slice(0, 9).forEach((video, i) => {
+        const card = document.createElement("div");
+        card.className = "reqCard";
+        const key = document.createElement("span");
+        key.className = "reqKey";
+        key.textContent = i + 1;
+        const title = document.createElement("span");
+        title.className = "reqTitle";
+        title.textContent = (i === currentIndex ? "↻ " : "") + video.title;
+        card.appendChild(key);
+        card.appendChild(title);
+        card.addEventListener("click", () => { clearRequestTimer(); startVideo(i); });
+        grid.appendChild(card);
+      });
+    }
+
+    function handleNumberKey(n) {
+      const idx = n - 1;
+      if (idx >= shorts.length || idx > 8) return;
+      if (!$("requestOverlay").classList.contains("hidden")) startVideo(idx);
+    }
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    $("startBtn").addEventListener("click", () => {
+      hide($("startOverlay"));
+      if (!bootDone) { bootDone = true; openRequestWindow(); return; }
+      startVideo(Math.min(pendingStartIndex ?? currentIndex, shorts.length - 1));
+    });
+    $("skipBtn").addEventListener("click", () => { openRequestWindow(); });
+    $("fsBtn").addEventListener("click", toggleFullscreen);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "f" || e.key === "F") toggleFullscreen();
+      else if (/^[1-9]$/.test(e.key)) handleNumberKey(parseInt(e.key, 10));
+    });
+
+    window.onYouTubeIframeAPIReady = function () { ytReady = true; };
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    (function boot() {
+      if (shorts.length === 0) {
+        $("startTitle").textContent = "The jukebox is empty - add some Shorts links in playlists.js.";
+        $("startBtn").style.display = "none";
+      } else {
+        $("startTitle").textContent = `${shorts.length} shorts loaded - nothing plays until YOU pick one.`;
+      }
+      show($("startOverlay"));
+    })();
+  </script>
+  <script>
+    // YouTube blocks embeds that have no web origin (opened as a file) - "Error 153".
+    // Serve this page over http://localhost instead - run Localhost.ps1 in this folder.
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText = "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML = "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" + page + "</b> instead.";
+      document.body.appendChild(warn);
+    }
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+  <script>
+    // Burning embers - they bounce off the shorts box instead of drifting over the video.
+    (function () {
+      const c = document.createElement("canvas");
+      c.className = "mavo-embers";
+      document.body.appendChild(c);
+      const x = c.getContext("2d");
+      const blockEl = document.querySelector("#phone, #screen, #miniPlayer");
+      let W, H, R = null, P = [];
+      function measure() { R = blockEl ? blockEl.getBoundingClientRect() : null; }
+      function rs() { W = c.width = innerWidth; H = c.height = innerHeight; measure(); }
+      rs(); addEventListener("resize", rs); setInterval(measure, 500);
+      const mb = matchMedia("(max-width: 660px)").matches; // phones: classic ember size (V2.1)
+      function mk(anywhere) {
+        const flare = Math.random() < 0.12; // a few fat slow coals
+        return { x: Math.random() * W, y: anywhere ? Math.random() * H : H + 8 + Math.random() * 60,
+          r: mb ? (flare ? 3.4 + Math.random() * 2.4 : 1.3 + Math.random() * 3.2) : (flare ? 4.6 + Math.random() * 3.2 : 1.8 + Math.random() * 4.0),
+          vy: (flare ? 0.3 : 0.55) + Math.random() * 1.35,
+          vx: (Math.random() - 0.5) * 1.0, tw: Math.random() * Math.PI * 2,
+          hue: 16 + Math.random() * 34, hot: Math.random() < (mb ? 0.18 : 0.24), hit: 0 };
+      }
+      for (let i = 0; i < (mb ? 130 : 150); i++) P.push(mk(true));
+      (function frame() {
+        x.clearRect(0, 0, W, H);
+        P.forEach((p, i) => {
+          if (R) {
+            const pad = 5 + p.r;
+            const insideX = p.x > R.left - pad && p.x < R.right + pad;
+            const insideY = p.y > R.top - pad && p.y < R.bottom + pad;
+            if (insideX && insideY) {
+              // bounced off a side wall - never inside the box
+              const mid = (R.left + R.right) / 2;
+              const leftOut = p.x < mid;
+              p.x = leftOut ? R.left - pad : R.right + pad;
+              p.vx = (leftOut ? -1 : 1) * (1.2 + Math.random() * 0.8);
+              p.hit = 8;
+            } else if (insideX && p.y <= R.bottom + pad + 34 && p.y > R.bottom + pad) {
+              // approaching the box from below - slide off sideways before entering
+              const mid = (R.left + R.right) / 2;
+              p.vx += (p.x < mid ? -0.35 : 0.35);
+              if (p.vx > 3) p.vx = 3;
+              if (p.vx < -3) p.vx = -3;
+              p.hit = Math.max(p.hit, 2);
+            }
+          }
+          p.y -= p.vy; p.x += p.vx + Math.sin((p.y + p.tw * 90) / 55) * 0.45; p.tw += 0.06;
+          if (p.hit > 0) p.hit--;
+          if (p.y < -14 || p.x < -14 || p.x > W + 14) P[i] = mk(false);
+          const a = Math.min(1, 0.45 + 0.55 * Math.abs(Math.sin(p.tw)) + (p.hit ? 0.35 : 0));
+          x.shadowBlur = mb ? 16 : 26; x.shadowColor = "rgba(255,120,20," + a + ")";
+          x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.283);
+          x.fillStyle = p.hot ? "hsla(48,100%,72%," + a + ")" : "hsla(" + p.hue + ",100%,58%," + a + ")";
+          x.fill();
+        });
+        x.shadowBlur = 0; requestAnimationFrame(frame);
+      })();
+    })();
+  </script>
+</body>
+</html>

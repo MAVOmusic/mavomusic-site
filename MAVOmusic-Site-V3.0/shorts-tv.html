@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shorts TV - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #04070a;
+      --line: rgba(65, 216, 255, 0.55);
+      --line-dim: rgba(65, 216, 255, 0.22);
+      --text: #ddf4ff;
+      --muted: rgba(221, 244, 255, 0.72);
+      --accent: #41d8ff;
+      --onair: #ff4d4d;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* CRT scanlines */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.03) 0,
+          rgba(255,255,255,0.03) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.6;
+    }
+
+    /* CRT vignette */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 11;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at center, rgba(24, 110, 145, 0.16), transparent 50%),
+        #020304;
+    }
+
+    #phone {
+      position: relative;
+      width: min(100vw, calc(100vh * 9 / 16));
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--line-dim);
+      border-radius: clamp(0px, 2.2vh, 24px);
+      box-shadow: 0 0 45px rgba(65, 216, 255, 0.15), 0 0 140px rgba(65, 216, 255, 0.06);
+      opacity: 1;
+      transition: opacity 0.25s ease;
+    }
+
+    #phone.tuning { opacity: 0; }
+
+    #player, #phone iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    #staticCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 24;
+      image-rendering: pixelated;
+    }
+
+    .hud {
+      position: fixed;
+      left: 10px;
+      top: 10px;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: calc(100vw - 330px);
+      padding: 6px 10px;
+      border: 1px solid var(--line-dim);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.72);
+      color: var(--text);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--onair);
+      box-shadow: 0 0 10px var(--onair);
+      animation: blink 1.2s infinite;
+    }
+
+    .onair { color: var(--onair); font-weight: 700; letter-spacing: 0.2em; }
+
+    #controls {
+      position: fixed;
+      right: 10px;
+      top: 10px;
+      z-index: 25;
+      display: flex;
+      gap: 8px;
+    }
+
+    .pill {
+      cursor: pointer;
+      padding: 6px 10px;
+      border: 1px solid var(--line-dim);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.72);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+
+    .pill:hover { color: var(--text); border-color: var(--line); }
+
+    #nextUp {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      z-index: 20;
+      max-width: 90vw;
+      padding: 7px 11px;
+      border: 1px solid var(--line-dim);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.74);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-align: center;
+      pointer-events: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Channel badge that pops up right after tuning in, like an old TV. */
+    #splash {
+      position: fixed;
+      right: 4vw;
+      bottom: 8vh;
+      z-index: 26;
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--line-dim);
+      color: var(--accent);
+      font-family: Consolas, Monaco, monospace;
+      text-align: left;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      text-shadow: 0 0 12px rgba(65, 216, 255, 0.6);
+    }
+
+    #splash.show { opacity: 1; }
+    #splashCH { font-size: clamp(26px, 5vw, 44px); font-weight: 800; line-height: 1; }
+    #splashTitle { font-size: clamp(10px, 1.6vw, 13px); color: var(--muted); margin-top: 6px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at center, rgba(24, 110, 145, 0.2), transparent 55%),
+        rgba(2, 3, 4, 0.94);
+    }
+
+    .hidden { display: none !important; }
+
+    .kicker {
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-size: clamp(10px, 1.4vw, 14px);
+    }
+
+    .title {
+      font-size: clamp(16px, 3vw, 30px);
+      max-width: 82vw;
+      text-shadow: 0 0 14px rgba(65, 216, 255, 0.45);
+    }
+
+    .cta {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: rgba(65, 216, 255, 0.12);
+      color: var(--text);
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: clamp(14px, 2vw, 20px);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .cta:hover { background: rgba(65, 216, 255, 0.3); }
+
+    .dim { color: var(--muted); font-size: 13px; max-width: 70vw; }
+
+    @keyframes blink {
+      0%, 45% { opacity: 1; }
+      46%, 100% { opacity: 0.3; }
+    }
+  
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .pill, .cta { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+  
+  
+    .mavo-embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+    #phone, #screen, #miniPlayer { position: relative; z-index: 2; }
+
+  
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="phone"><div id="player"></div></div>
+  </div>
+
+  <canvas id="staticCanvas" class="hidden" width="220" height="124"></canvas>
+
+  <div id="hud" class="hud hidden">
+    <span class="dot"></span>
+    <span class="onair">ON AIR</span>
+    <span id="hudText"></span>
+  </div>
+
+  <div id="controls">
+    <button id="skipBtn" class="pill hidden" title="Change channel now">Next channel ⏭</button>
+    <button id="restartBtn" class="pill hidden" title="Back to channel 1">CH 1 ⟲</button>
+    <button id="fsBtn" class="pill" title="Real fullscreen (or press F)">Fullscreen ⛶</button>
+    <a class="pill" href="/" target="_top" title="Back to the launcher">☰ Station</a>
+  </div>
+
+  <div id="nextUp" class="hidden"></div>
+
+  <div id="splash" class="hidden">
+    <div id="splashCH">CH 01</div>
+    <div id="splashTitle"></div>
+  </div>
+
+  <div id="startOverlay" class="overlay hidden">
+    <div class="kicker">YouTube Shorts TV</div>
+    <div id="startTitle" class="title"></div>
+    <button id="startBtn" class="cta">📺 Turn the TV on</button>
+    <div class="dim">
+      Browsers only allow sound after one click. After that the broadcast runs
+      itself: channel after channel, a burst of static between them, forever.
+      Press F for real fullscreen.
+    </div>
+  </div>
+
+  <div id="endOverlay" class="overlay hidden">
+    <div class="kicker">End of broadcast</div>
+    <div class="title">ALL CHANNELS SHOWN</div>
+    <div class="dim">
+      Add more links to the list in playlists.js and save it -
+      the TV re-checks by itself every <span id="recheckInfo">60</span> seconds.
+    </div>
+    <button id="replayBtn" class="cta">📺 Start the broadcast again</button>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * EDIT HERE
+     * Each line is one "channel". Paste full Shorts links OR just the
+     * video IDs. Add as many channels as you like.
+     *****************************************************************/
+    // The list lives in playlists.js (same folder). EDIT THERE.
+    const shorts = (window.MAVO_SHORTS || []).slice();
+    // V2.0: every visit deals a fresh shuffled queue - never the same running order twice.
+    for (let i = shorts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = shorts[i]; shorts[i] = shorts[j]; shorts[j] = t; }
+
+    // Length of the static burst + "shhh" when the channel changes, in
+    // milliseconds. Under a second keeps it snappy - try 400-900.
+    const staticMillis = 700;
+
+    // The classic TV-tuning "shhh" noise made with WebAudio (no files needed).
+    const staticSound = true;
+
+    // true = after the last channel, go back to CH 1 and broadcast forever.
+    // false = stop with an "end of broadcast" screen and wait for new links.
+    const loopChannels = true;
+
+    // Only used when loopChannels is false: reload this often on the
+    // end-of-broadcast screen to pick up newly added channels.
+    const recheckSeconds = 60;
+
+    /*****************************************************************
+     * No need to edit below this line unless you want to customise it.
+     *****************************************************************/
+    const $ = (id) => document.getElementById(id);
+
+    let currentIndex = 0;
+    let laps = 0;
+    let player = null;
+    let gotPlaying = false;
+    let ytReady = false;
+    let pendingStartIndex = null;
+    let tuning = false;
+    let splashTimer = null;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) {
+          return url.pathname.split("/").filter(Boolean)[0] || raw;
+        }
+        const vParam = url.searchParams.get("v");
+        if (vParam) return vParam;
+        const match = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (match) return match[2];
+      } catch (err) { /* not a URL */ }
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+
+    shorts.forEach((video) => { video.id = extractVideoId(video.url || video.id); });
+
+    function pad(number) { return String(number).padStart(2, "0"); }
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function hideAllOverlays() {
+      hide($("startOverlay"));
+      hide($("endOverlay"));
+    }
+
+    // --- Static noise (video) ----------------------------------------------
+
+    const staticCanvas = $("staticCanvas");
+    const staticCtx = staticCanvas.getContext("2d");
+    let staticTimer = null;
+
+    function drawStaticFrame() {
+      const img = staticCtx.createImageData(staticCanvas.width, staticCanvas.height);
+      const data = img.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const v = (Math.random() * 255) | 0;
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+        data[i + 3] = 255;
+      }
+      staticCtx.putImageData(img, 0, 0);
+    }
+
+    function startStatic() {
+      show(staticCanvas);
+      drawStaticFrame();
+      staticTimer = setInterval(drawStaticFrame, 50);
+    }
+
+    function stopStatic() {
+      if (staticTimer) {
+        clearInterval(staticTimer);
+        staticTimer = null;
+      }
+      hide(staticCanvas);
+    }
+
+    // --- Static "shhh" (audio, generated - no files needed) -----------------
+
+    let audioCtx = null;
+
+    function ensureAudio() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      } catch (err) { /* audio not available */ }
+    }
+
+    function playStaticHiss() {
+      if (!staticSound) return;
+      ensureAudio();
+      if (!audioCtx) return;
+      try {
+        const dur = Math.min(staticMillis / 1000, 0.9);
+        const frames = Math.floor(audioCtx.sampleRate * dur);
+        const buffer = audioCtx.createBuffer(1, frames, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 2200;
+        filter.Q.value = 0.5;
+
+        const gain = audioCtx.createGain();
+        const t = audioCtx.currentTime;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.22, t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        src.start(t);
+        src.stop(t + dur);
+      } catch (err) { /* ignore audio errors */ }
+    }
+
+    // Quick static burst + hiss, then run the callback (the actual tuning).
+    function staticBurstThen(callback) {
+      startStatic();
+      playStaticHiss();
+      setTimeout(() => {
+        stopStatic();
+        callback();
+      }, staticMillis);
+    }
+
+    // --- Channel badge -------------------------------------------------------
+
+    function showSplash(index) {
+      const splash = $("splash");
+      $("splashCH").textContent = `CH ${pad(index + 1)}`;
+      $("splashTitle").textContent = shorts[index].title;
+      splash.classList.remove("show");
+      show(splash);
+      requestAnimationFrame(() => requestAnimationFrame(() => splash.classList.add("show")));
+      if (splashTimer) clearTimeout(splashTimer);
+      splashTimer = setTimeout(() => {
+        splash.classList.remove("show");
+        setTimeout(() => hide(splash), 350);
+      }, 2200);
+    }
+
+    // --- The TV --------------------------------------------------------------
+
+    function updateHud() {
+      show($("hud"));
+      show($("skipBtn"));
+      show($("restartBtn"));
+      $("hudText").textContent =
+        `CH ${pad(currentIndex + 1)}/${pad(shorts.length)} // ${shorts[currentIndex].title}`;
+
+      const next = shorts[(currentIndex + 1) % shorts.length];
+      if (next && (loopChannels || currentIndex + 1 < shorts.length)) {
+        $("nextUp").textContent =
+          `NEXT CHANNEL // CH ${pad(((currentIndex + 1) % shorts.length) + 1)} · ${next.title}`;
+        show($("nextUp"));
+      } else {
+        hide($("nextUp"));
+      }
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%",
+        height: "100%",
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          rel: 0,
+          playsinline: 1,
+          modestbranding: 1,
+          iv_load_policy: 3
+        },
+        events: {
+          onReady: (event) => event.target.playVideo(),
+          onStateChange: onPlayerState,
+          onError: onPlayerError
+        }
+      });
+    }
+
+    function tuneIn(index) {
+      currentIndex = index;
+      hideAllOverlays();
+      updateHud();
+      showSplash(index);
+      gotPlaying = false;
+
+      const video = shorts[index];
+      if (player && typeof player.loadVideoById === "function") {
+        player.loadVideoById(video.id);
+      } else if (ytReady) {
+        createPlayer(video.id);
+      } else {
+        pendingStartIndex = index;
+      }
+
+      // If autoplay with sound got blocked, offer the start overlay again.
+      setTimeout(() => {
+        if (!gotPlaying) {
+          $("startTitle").textContent =
+            `Your browser paused the broadcast. Click below to tune back into CH ${pad(index + 1)}: ${shorts[index].title}`;
+          show($("startOverlay"));
+        }
+      }, 7000);
+      setTimeout(() => { tuning = false; }, 300);
+    }
+
+    function changeChannelTo(index) {
+      if (tuning) return;
+      tuning = true;
+      $("phone").classList.add("tuning");
+      staticBurstThen(() => {
+        $("phone").classList.remove("tuning");
+        tuneIn(index);
+      });
+    }
+
+    function onPlayerState(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        gotPlaying = true;
+        hide($("startOverlay"));
+      }
+      if (event.data === YT.PlayerState.ENDED) {
+        channelFinished();
+      }
+    }
+
+    function onPlayerError(event) {
+      gotPlaying = true;
+      channelFinished(); // dead channel? just keep flipping
+    }
+
+    function nextChannelIndex() {
+      const next = currentIndex + 1;
+      if (next < shorts.length) return next;
+      if (loopChannels) return 0;
+      return -1;
+    }
+
+    function channelFinished() {
+      const nextIndex = nextChannelIndex();
+      if (nextIndex < 0) {
+        enterEndOfBroadcast();
+        return;
+      }
+      if (nextIndex <= currentIndex) laps++;
+      changeChannelTo(nextIndex);
+    }
+
+    function enterEndOfBroadcast() {
+      stopStatic();
+      hideAllOverlays();
+      hide($("hud"));
+      hide($("nextUp"));
+      hide($("skipBtn"));
+      hide($("restartBtn"));
+      $("recheckInfo").textContent = recheckSeconds;
+      show($("endOverlay"));
+      setTimeout(() => location.reload(), recheckSeconds * 1000);
+    }
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+
+    // --- Wiring ----------------------------------------------------------------
+
+    $("startBtn").addEventListener("click", () => {
+      ensureAudio();
+      hide($("startOverlay"));
+      changeChannelTo(currentIndex);
+    });
+
+    $("skipBtn").addEventListener("click", channelFinished);
+    $("restartBtn").addEventListener("click", () => changeChannelTo(0));
+    $("replayBtn").addEventListener("click", () => location.reload());
+    $("fsBtn").addEventListener("click", toggleFullscreen);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "f" || event.key === "F") toggleFullscreen();
+      if (event.key === "ArrowUp" || event.key === " ") channelFinished();
+    });
+
+    // --- Boot --------------------------------------------------------------------
+
+    window.onYouTubeIframeAPIReady = function () {
+      ytReady = true;
+      if (pendingStartIndex !== null) {
+        const index = pendingStartIndex;
+        pendingStartIndex = null;
+        tuneIn(index);
+      }
+    };
+
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    (function boot() {
+      $("recheckInfo").textContent = recheckSeconds;
+
+      if (shorts.length === 0) {
+        $("startTitle").textContent =
+          "No channels - add some Shorts links in playlists.js.";
+        $("startBtn").style.display = "none";
+      } else {
+        $("startTitle").textContent =
+          `${shorts.length} channels programmed - broadcasting ${loopChannels ? "on an endless loop" : "until the end of the list"}.`;
+      }
+      show($("startOverlay"));
+    })();
+  </script>
+  <script>
+    // YouTube blocks embeds that have no web origin (opened as a file),
+    // which is exactly what "Error 153" means. Serve this page over
+    // http://localhost instead - run Localhost.ps1 in this folder.
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText =
+        "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;" +
+        "max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;" +
+        "background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;" +
+        "font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML =
+        "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>" +
+        "Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" +
+        page + "</b> instead.";
+      document.body.appendChild(warn);
+    }
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+  <script>
+    // Burning embers - they bounce off the shorts box instead of drifting over the video.
+    (function () {
+      const c = document.createElement("canvas");
+      c.className = "mavo-embers";
+      document.body.appendChild(c);
+      const x = c.getContext("2d");
+      const blockEl = document.querySelector("#phone, #screen, #miniPlayer");
+      let W, H, R = null, P = [];
+      function measure() { R = blockEl ? blockEl.getBoundingClientRect() : null; }
+      function rs() { W = c.width = innerWidth; H = c.height = innerHeight; measure(); }
+      rs(); addEventListener("resize", rs); setInterval(measure, 500);
+      const mb = matchMedia("(max-width: 660px)").matches; // phones: classic ember size (V2.1)
+      function mk(anywhere) {
+        const flare = Math.random() < 0.12; // a few fat slow coals
+        return { x: Math.random() * W, y: anywhere ? Math.random() * H : H + 8 + Math.random() * 60,
+          r: mb ? (flare ? 3.4 + Math.random() * 2.4 : 1.3 + Math.random() * 3.2) : (flare ? 4.6 + Math.random() * 3.2 : 1.8 + Math.random() * 4.0),
+          vy: (flare ? 0.3 : 0.55) + Math.random() * 1.35,
+          vx: (Math.random() - 0.5) * 1.0, tw: Math.random() * Math.PI * 2,
+          hue: 16 + Math.random() * 34, hot: Math.random() < (mb ? 0.18 : 0.24), hit: 0 };
+      }
+      for (let i = 0; i < (mb ? 130 : 150); i++) P.push(mk(true));
+      (function frame() {
+        x.clearRect(0, 0, W, H);
+        P.forEach((p, i) => {
+          if (R) {
+            const pad = 5 + p.r;
+            const insideX = p.x > R.left - pad && p.x < R.right + pad;
+            const insideY = p.y > R.top - pad && p.y < R.bottom + pad;
+            if (insideX && insideY) {
+              // bounced off a side wall - never inside the box
+              const mid = (R.left + R.right) / 2;
+              const leftOut = p.x < mid;
+              p.x = leftOut ? R.left - pad : R.right + pad;
+              p.vx = (leftOut ? -1 : 1) * (1.2 + Math.random() * 0.8);
+              p.hit = 8;
+            } else if (insideX && p.y <= R.bottom + pad + 34 && p.y > R.bottom + pad) {
+              // approaching the box from below - slide off sideways before entering
+              const mid = (R.left + R.right) / 2;
+              p.vx += (p.x < mid ? -0.35 : 0.35);
+              if (p.vx > 3) p.vx = 3;
+              if (p.vx < -3) p.vx = -3;
+              p.hit = Math.max(p.hit, 2);
+            }
+          }
+          p.y -= p.vy; p.x += p.vx + Math.sin((p.y + p.tw * 90) / 55) * 0.45; p.tw += 0.06;
+          if (p.hit > 0) p.hit--;
+          if (p.y < -14 || p.x < -14 || p.x > W + 14) P[i] = mk(false);
+          const a = Math.min(1, 0.45 + 0.55 * Math.abs(Math.sin(p.tw)) + (p.hit ? 0.35 : 0));
+          x.shadowBlur = mb ? 16 : 26; x.shadowColor = "rgba(255,120,20," + a + ")";
+          x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.283);
+          x.fillStyle = p.hot ? "hsla(48,100%,72%," + a + ")" : "hsla(" + p.hue + ",100%,58%," + a + ")";
+          x.fill();
+        });
+        x.shadowBlur = 0; requestAnimationFrame(frame);
+      })();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Cache discipline (V2.7) - never serve a stale home page again.
+# Honored by Cloudflare static hosting and Netlify; ignored elsewhere, harmless.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/playlists.js
+  Cache-Control: public, max-age=0, must-revalidate
+/songlist.js
+  Cache-Control: public, max-age=0, must-revalidate
+/assets/*
+  Cache-Control: public, max-age=86400

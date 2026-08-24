@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/png" href="assets/icon-horns.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bass Radio - MAVOmusic</title>
+  <style>
+    :root {
+      --bg: #090504;
+      --line: rgba(255, 107, 61, 0.55);
+      --line-dim: rgba(255, 107, 61, 0.22);
+      --text: #ffe8dd;
+      --muted: rgba(255, 232, 221, 0.72);
+      --accent: #ff6b3d;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: linear-gradient(rgba(6,3,2,0.82), rgba(6,3,2,0.93)), url("assets/bg-stairway.jpg") center / cover no-repeat fixed, var(--bg); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 4px); mix-blend-mode: screen; opacity: 0.5; }
+
+    #center { position: fixed; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; background: radial-gradient(circle at center, rgba(160, 60, 24, 0.18), transparent 55%), #030202; }
+    .kicker { letter-spacing: 0.4em; text-transform: uppercase; color: var(--accent); font-size: clamp(11px, 1.6vw, 15px); font-weight: 700; text-shadow: 0 0 16px rgba(255,107,61,0.55); }
+    #station { letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); font-size: clamp(10px, 1.3vw, 13px); }
+    #nowTitle { font-size: clamp(18px, 3.2vw, 34px); max-width: 84vw; text-shadow: 0 0 18px rgba(255,107,61,0.4); }
+    #trackInfo { color: var(--muted); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+    /* V2.1: text floats over the video, so it needs its own glow */
+    #station, .kicker, #nowTitle, #trackInfo, #times, #nextUp { text-shadow: 0 2px 5px rgba(0,0,0,0.95), 0 0 16px rgba(255,120,60,0.6); }
+
+    #eq { display: flex; gap: 3px; align-items: flex-end; height: 120px; }
+    #eq span { width: 7px; border-radius: 3px 3px 0 0;
+      background: linear-gradient(180deg, #ffd23d, var(--accent) 45%, #b31200);
+      box-shadow: 0 0 13px rgba(255,107,61,0.72); height: 8%; transition: height 0.12s ease-out; }}
+
+    #progressWrap { width: min(78vw, 460px); }
+    #bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.09); overflow: hidden; border: 1px solid var(--line-dim); }
+    #fill { height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 12px rgba(255,107,61,0.6); border-radius: 999px; transition: width 0.4s linear; }
+    #times { margin-top: 6px; font-family: Consolas, Monaco, monospace; font-size: 12.5px; color: var(--muted); display: flex; justify-content: center; align-items: baseline; gap: 7px; }
+    #times .tsep { color: rgba(255, 238, 221, 0.4); }
+
+    #miniPlayer { position: fixed; right: 12px; bottom: 12px; z-index: 1; width: 110px; aspect-ratio: 9 / 16; border: 1px solid var(--line-dim); border-radius: 10px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.6); background: #000; }
+    #miniPlayer iframe, #player { width: 100%; height: 100%; border: 0; display: block; }
+
+    #controls { position: fixed; right: 10px; top: 10px; z-index: 25; display: flex; gap: 8px; }
+    .pill { cursor: pointer; padding: 6px 10px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.72); color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; }
+    .pill:hover { color: var(--text); border-color: var(--line); }
+
+    #nextUp { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20; max-width: 66vw; padding: 7px 11px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(0,0,0,0.74); color: var(--muted); font-size: 12px; letter-spacing: 0.05em; text-align: center; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; background: radial-gradient(circle at center, rgba(160,60,24,0.22), transparent 55%), rgba(3,2,2,0.94); }
+    .hidden { display: none !important; }
+    .title { font-size: clamp(16px, 3vw, 30px); max-width: 82vw; text-shadow: 0 0 14px rgba(255,107,61,0.45); }
+    .cta { cursor: pointer; border: 1px solid var(--line); background: rgba(255,107,61,0.12); color: var(--text); padding: 14px 28px; border-radius: 8px; font-size: clamp(14px,2vw,20px); letter-spacing: 0.12em; text-transform: uppercase; }
+    .cta:hover { background: rgba(255,107,61,0.3); }
+    .dim { color: var(--muted); font-size: 13px; max-width: 70vw; }
+  
+    /* ---- Compact mode: small stage frames + phones (V2.1) ---- */
+    @media (max-height: 560px), (max-width: 560px) {
+      #miniPlayer { width: 84px; right: 6px; bottom: 6px; opacity: 0.92; }
+      #center { gap: 10px; padding: 10px; }
+      #eq { height: 84px; }
+      #nextUp { bottom: 4px; font-size: 10px; }
+    }
+
+    /* ---- Bass cursor + dual neon slap waves (green/blue) ---- */
+    html, body, a, button, .pill, .cta { cursor: url("assets/bass-cursor.png") 23 0, auto; }
+    .slap { position: fixed; z-index: 99999; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border: 2px solid var(--slap, #39ff14); border-radius: 50%;
+      box-shadow: 0 0 14px var(--slap, #39ff14), inset 0 0 8px var(--slap, #39ff14);
+      pointer-events: none; animation: slapwave var(--dur, 0.7s) ease-out forwards; }
+    @keyframes slapwave {
+      to { width: var(--end, 90px); height: var(--end, 90px);
+        margin: calc(var(--end, 90px) / -2) 0 0 calc(var(--end, 90px) / -2);
+        transform: translateY(calc(var(--rise, 40px) * -1)); opacity: 0; border-width: 1px; } }
+
+  
+  
+    .mavo-embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+    #phone, #screen, #miniPlayer { position: relative; z-index: 2; }
+
+  
+  </style>
+</head>
+<body>
+  <div id="center">
+    <div id="station">- - -</div>
+    <div class="kicker" id="nowKicker">Now playing</div>
+    <div id="eq"></div>
+    <div id="nowTitle">-</div>
+    <div id="trackInfo">-</div>
+    <div id="progressWrap">
+      <div id="bar"><div id="fill"></div></div>
+      <div id="times"><span id="tCur">0:00</span><span class="tsep">/</span><span id="tTot">0:00</span></div>
+    </div>
+  </div>
+
+  <div id="miniPlayer"><div id="player"></div></div>
+
+  <div id="controls">
+    <button id="skipBtn" class="pill hidden" title="Next track now">Next track ⏭</button>
+    <a class="pill" href="/" target="_top" title="Back to the launcher">☰ Station</a>
+  </div>
+
+  <div id="nextUp" class="hidden"></div>
+
+  <div id="startOverlay" class="overlay hidden">
+    <div class="kicker">Bass Radio</div>
+    <div id="startTitle" class="title"></div>
+    <button id="startBtn" class="cta">📻 Turn the radio on</button>
+    <div class="dim">One click for sound. Perfect for music Shorts: the station plays them like tracks on a radio show - the audio is the show, the little screen sits in the corner.</div>
+  </div>
+
+  <script src="https://mavomusic.github.io/mavomusic-site/playlists.js"></script>
+  <script>
+    // V2.4: playlists load from GitHub Pages (edit songs online, no uploads).
+    // If that file is missing, has a typo, or the net is down, the packaged
+    // copy below loads instead - the station never breaks.
+    window.MAVO_LONGS && window.MAVO_SHORTS ||
+      document.write('<script src="playlists.js">\x3C/script>');
+  </script>
+  <script>
+    /*****************************************************************
+     * EDIT HERE - full Shorts links or just IDs, as many as you like.
+     * Built for music channels like MAVOmusic: the bass does the work.
+     *****************************************************************/
+    // The list lives in playlists.js (same folder). EDIT THERE.
+    const shorts = (window.MAVO_SHORTS || []).slice();
+    // V2.0: every visit deals a fresh shuffled queue - never the same running order twice.
+    for (let i = shorts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = shorts[i]; shorts[i] = shorts[j]; shorts[j] = t; }
+
+    // Your station name, shown top center.
+    const stationName = "B a s s   R a d i o";
+
+    // Short silent gap between tracks (seconds).
+    const secondsBetweenTracks = 2;
+
+    // Loop the list forever.
+    const loopTracks = true;
+
+    /*****************************************************************/
+    const $ = (id) => document.getElementById(id);
+    let currentIndex = 0, spins = 0, player = null, gotPlaying = false, ytReady = false;
+    let gapTimer = null;
+
+    function extractVideoId(value) {
+      const raw = String(value || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+      try {
+        const url = new URL(raw);
+        if (url.hostname.includes("youtu.be")) return url.pathname.split("/").filter(Boolean)[0] || raw;
+        const vParam = url.searchParams.get("v");
+        if (vParam) return vParam;
+        const match = url.pathname.match(/\/(embed|shorts|live)\/([A-Za-z0-9_-]{11})/);
+        if (match) return match[2];
+      } catch (err) {}
+      const loose = raw.match(/([A-Za-z0-9_-]{11})/);
+      return loose ? loose[1] : raw;
+    }
+    shorts.forEach((v) => { v.id = extractVideoId(v.url || v.id); });
+
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+    function clearGap() { if (gapTimer) { clearTimeout(gapTimer); gapTimer = null; } }
+    function fmt(sec) {
+      sec = Math.max(0, Math.floor(sec || 0));
+      return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+    }
+
+    function renderTrack() {
+      const video = shorts[currentIndex];
+      $("nowKicker").textContent = "Now playing";
+      $("nowTitle").textContent = video.title;
+      $("trackInfo").textContent = `Track ${currentIndex + 1} of ${shorts.length} · spin ${spins}`;
+      const next = shorts[(currentIndex + 1) % shorts.length];
+      if (next && (loopTracks || currentIndex + 1 < shorts.length)) {
+        $("nextUp").textContent = `NEXT TRACK // ${next.title}`;
+        show($("nextUp"));
+      } else hide($("nextUp"));
+      $("fill").style.width = "0%";
+    }
+
+    function createPlayer(videoId) {
+      player = new YT.Player("player", {
+        width: "100%", height: "100%", videoId: videoId,
+        playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
+        events: { onReady: (e) => e.target.playVideo(), onStateChange: onState, onError: onErr }
+      });
+    }
+
+    function startTrack(index) {
+      currentIndex = index;
+      clearGap();
+      hide($("startOverlay"));
+      renderTrack();
+      show($("skipBtn"));
+      gotPlaying = false;
+      const video = shorts[index];
+      if (player && typeof player.loadVideoById === "function") player.loadVideoById(video.id);
+      else createPlayer(video.id);
+      setTimeout(() => {
+        if (!gotPlaying) {
+          $("startTitle").textContent = `Your browser paused the radio. Click below to tune back in: ${shorts[index].title}`;
+          show($("startOverlay"));
+        }
+      }, 6000);
+    }
+
+    function onState(e) {
+      if (e.data === YT.PlayerState.PLAYING) {
+        gotPlaying = true;
+        document.body.classList.add("playing");
+        hide($("startOverlay"));
+      }
+      if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+        document.body.classList.remove("playing");
+      }
+      if (e.data === YT.PlayerState.ENDED) trackFinished();
+    }
+    function onErr() { gotPlaying = true; trackFinished(); }
+
+    function trackFinished() {
+      document.body.classList.remove("playing");
+      spins++;
+      let next = currentIndex + 1;
+      if (next >= shorts.length) next = loopTracks ? 0 : -1;
+      if (next < 0) {
+        hide($("nextUp")); hide($("skipBtn"));
+        $("nowKicker").textContent = "Broadcast finished";
+        $("startTitle").textContent = `The station played ${spins} tracks. Add more links to playlists.js and save, then reload.`;
+        $("startBtn").style.display = "none";
+        show($("startOverlay"));
+        return;
+      }
+      $("nowKicker").textContent = "Up next…";
+      $("trackInfo").textContent = shorts[next].title;
+      gapTimer = setTimeout(() => startTrack(next), secondsBetweenTracks * 1000);
+    }
+
+    function poll() {
+      if (!player || typeof player.getCurrentTime !== "function") return;
+      try {
+        const cur = player.getCurrentTime() || 0;
+        const tot = player.getDuration() || 0;
+        $("tCur").textContent = fmt(cur);
+        $("tTot").textContent = fmt(tot);
+        $("fill").style.width = tot > 0 ? Math.min(100, (cur / tot) * 100).toFixed(1) + "%" : "0%";
+      } catch (e) {}
+    }
+
+    $("startBtn").addEventListener("click", () => { hide($("startOverlay")); startTrack(currentIndex); });
+    $("skipBtn").addEventListener("click", trackFinished);
+
+    window.onYouTubeIframeAPIReady = function () { ytReady = true; };
+    const apiTag = document.createElement("script");
+    apiTag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(apiTag);
+
+    (function boot() {
+      $("station").textContent = stationName;
+      setInterval(poll, 500);
+      if (shorts.length === 0) {
+        $("startTitle").textContent = "The station has no records - add some Shorts links in playlists.js.";
+        $("startBtn").style.display = "none";
+      } else {
+        $("startTitle").textContent = `${shorts.length} tracks on the playlist - broadcasting non-stop.`;
+      }
+      show($("startOverlay"));
+      renderTrack();
+    })();
+  </script>
+  <script>
+    // YouTube blocks embeds that have no web origin (opened as a file) - "Error 153".
+    // Serve this page over http://localhost instead - run Localhost.ps1 in this folder.
+    if (location.protocol === "file:") {
+      const page = location.pathname.split("/").pop();
+      const warn = document.createElement("div");
+      warn.style.cssText = "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;max-width:92vw;padding:10px 16px;border-radius:10px;text-align:center;background:rgba(58,13,19,0.95);color:#ffb3bd;border:1px solid #ff4d6d;font:13px Arial,sans-serif;line-height:1.5";
+      warn.innerHTML = "⚠ <b>Error 153 happens because this file was opened directly (file://).</b><br>Run <b>Localhost.ps1</b> in this folder, then open <b>http://localhost:8000/" + page + "</b> instead.";
+      document.body.appendChild(warn);
+    }
+  </script>
+
+  <script>
+    // Dual neon slap waves (green + blue) - random sizes, drifting upwards like sound.
+    document.addEventListener("pointerdown", function (e) {
+      const NEON = ["#39ff14", "#00cfff"];
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("span");
+        s.className = "slap";
+        s.style.left = e.clientX + "px";
+        s.style.top = e.clientY + "px";
+        s.style.setProperty("--slap", NEON[i % NEON.length]);
+        s.style.setProperty("--end", Math.round(60 + Math.random() * 110) + "px");
+        s.style.setProperty("--rise", Math.round(15 + Math.random() * 60) + "px");
+        s.style.setProperty("--dur", (0.55 + Math.random() * 0.35).toFixed(2) + "s");
+        s.style.animationDelay = (i * 0.07).toFixed(2) + "s";
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 1400);
+      }
+    });
+  </script>
+  <script>
+    // Burning embers - they bounce off the shorts box instead of drifting over the video.
+    (function () {
+      const c = document.createElement("canvas");
+      c.className = "mavo-embers";
+      document.body.appendChild(c);
+      const x = c.getContext("2d");
+      const blockEl = document.querySelector("#phone, #screen, #miniPlayer");
+      let W, H, R = null, P = [];
+      function measure() { R = blockEl ? blockEl.getBoundingClientRect() : null; }
+      function rs() { W = c.width = innerWidth; H = c.height = innerHeight; measure(); }
+      rs(); addEventListener("resize", rs); setInterval(measure, 500);
+      const mb = matchMedia("(max-width: 660px)").matches; // phones: classic ember size (V2.1)
+      function mk(anywhere) {
+        const flare = Math.random() < 0.12; // a few fat slow coals
+        return { x: Math.random() * W, y: anywhere ? Math.random() * H : H + 8 + Math.random() * 60,
+          r: mb ? (flare ? 3.4 + Math.random() * 2.4 : 1.3 + Math.random() * 3.2) : (flare ? 4.6 + Math.random() * 3.2 : 1.8 + Math.random() * 4.0),
+          vy: (flare ? 0.3 : 0.55) + Math.random() * 1.35,
+          vx: (Math.random() - 0.5) * 1.0, tw: Math.random() * Math.PI * 2,
+          hue: 16 + Math.random() * 34, hot: Math.random() < (mb ? 0.18 : 0.24), hit: 0 };
+      }
+      for (let i = 0; i < (mb ? 130 : 150); i++) P.push(mk(true));
+      (function frame() {
+        x.clearRect(0, 0, W, H);
+        P.forEach((p, i) => {
+          if (R) {
+            const pad = 5 + p.r;
+            const insideX = p.x > R.left - pad && p.x < R.right + pad;
+            const insideY = p.y > R.top - pad && p.y < R.bottom + pad;
+            if (insideX && insideY) {
+              // bounced off a side wall - never inside the box
+              const mid = (R.left + R.right) / 2;
+              const leftOut = p.x < mid;
+              p.x = leftOut ? R.left - pad : R.right + pad;
+              p.vx = (leftOut ? -1 : 1) * (1.2 + Math.random() * 0.8);
+              p.hit = 8;
+            } else if (insideX && p.y <= R.bottom + pad + 34 && p.y > R.bottom + pad) {
+              // approaching the box from below - slide off sideways before entering
+              const mid = (R.left + R.right) / 2;
+              p.vx += (p.x < mid ? -0.35 : 0.35);
+              if (p.vx > 3) p.vx = 3;
+              if (p.vx < -3) p.vx = -3;
+              p.hit = Math.max(p.hit, 2);
+            }
+          }
+          p.y -= p.vy; p.x += p.vx + Math.sin((p.y + p.tw * 90) / 55) * 0.45; p.tw += 0.06;
+          if (p.hit > 0) p.hit--;
+          if (p.y < -14 || p.x < -14 || p.x > W + 14) P[i] = mk(false);
+          const a = Math.min(1, 0.45 + 0.55 * Math.abs(Math.sin(p.tw)) + (p.hit ? 0.35 : 0));
+          x.shadowBlur = mb ? 16 : 26; x.shadowColor = "rgba(255,120,20," + a + ")";
+          x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.283);
+          x.fillStyle = p.hot ? "hsla(48,100%,72%," + a + ")" : "hsla(" + p.hue + ",100%,58%," + a + ")";
+          x.fill();
+        });
+        x.shadowBlur = 0; requestAnimationFrame(frame);
+      })();
+    })();
+  </script>
+  <script>
+    // ---- Live visualizer: 42 bars, bass-weighted, randomized ------------
+    (function () {
+      const eq = document.getElementById("eq");
+      if (!eq) return;
+      const N = 42, bars = [], val = [], tgt = [];
+      for (let i = 0; i < N; i++) {
+        const s = document.createElement("span");
+        eq.appendChild(s); bars.push(s);
+        val.push(8 + Math.random() * 10); tgt.push(val[i]);
+      }
+      (function fr() {
+        const on = document.body.classList.contains("playing");
+        for (let i = 0; i < N; i++) {
+          if (on && Math.random() < 0.35) {
+            const bass = Math.max(0.25, 1 - i / N);
+            tgt[i] = 8 + Math.random() * (88 * bass + 10);
+          }
+          if (!on) tgt[i] = 8;
+          val[i] += (tgt[i] - val[i]) * 0.35;
+          bars[i].style.height = val[i].toFixed(1) + "%";
+        }
+        requestAnimationFrame(fr);
+      })();
+    })();
+
+  </script>
+</body>
+</html>
